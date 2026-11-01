@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EP01 — Bangladesh Bank Heist — Overlays</title>
+<!--
+  Unfiction · EP01 · overlays for the Blender (ANIM) and on-camera (ME) shots
+  Open as overlays.html?key and press SHIFT+E: every overlay is exported on flat green (#00FF00)
+  for keying over the shot in the edit. Without ?key they play on black for previewing.
+
+  1  Dramatisation label   every ANIM shot (script: "On-screen disclaimers")
+  2  Time chip             L40  Thursday 4 Feb, 8:36 pm
+  3  Time chip             L63  Friday 5 Feb, 10:30 am
+  4  Time chip             L67  Saturday 6 Feb
+  5–9 Name tags            first time each person is named, with their legal status
+
+  SPACE play/pause · ←/→ previous/next · 1-9 jump · E export one (with ?scene=N) · SHIFT+E export all · K editorial check
+-->
+<script src="../../toolkit/core/uf-core.js"></script>
+<script src="../../toolkit/core/uf-draw.js"></script>
+<script src="../../toolkit/components/uf-overlays.js"></script>
+<script src="../../toolkit/components/uf-timeline.js"></script>
+</head>
+<body>
+<script>
+'use strict';
+
+function dramaLabel() {
+  return {
+    id: 'dramatisation-label',
+    title: 'ANIM · Dramatisation label',
+    duration: 20,
+    pushIn: 0,
+    factual: false,
+    layers: [new UF.DramaLabel({ text: 'DRAMATISATION', corner: 'br', at: 0.3 })],
+  };
+}
+
+function timeChip(id, title, item) {
+  return {
+    id,
+    title,
+    duration: 6,
+    pushIn: 0,
+    factual: false,
+    layers: [new UF.TimeChip({ items: [Object.assign({ at: 0.3 }, item)] })],
+  };
+}
+
+function nameTag(id, title, o) {
+  return {
+    id,
+    title,
+    duration: 6,
+    pushIn: 0,
+    factual: false,
+    layers: [new UF.LowerThird(Object.assign({ at: 0.3, out: 5.4 }, o))],
+  };
+}
+
+new UF.Stage({
+  title: 'EP01 · OVERLAYS',
+  slug: 'ep01-overlay',
+  gap: 1.0,
+  scenes: [
+    dramaLabel(),
+    timeChip('l40-thursday', 'L40 · Thu 4 Feb, 8:36 pm',  { time: '8:36 PM',  date: 'THURSDAY 4 FEB', place: 'DHAKA' }),
+    timeChip('l63-friday',   'L63 · Fri 5 Feb, 10:30 am', { time: '10:30 AM', date: 'FRIDAY 5 FEB',   place: 'DHAKA' }),
+    timeChip('l67-saturday', 'L67 · Sat 6 Feb',           { time: '6 FEB',    date: 'SATURDAY',       place: 'DHAKA' }),
+    nameTag('name-bin-huda', 'L63 · Zubair Bin Huda', {
+      name: 'ZUBAIR BIN HUDA', role: 'Duty officer, Bangladesh Bank', status: 'official',
+    }),
+    nameTag('name-deguito', 'L79 · Maia Santos-Deguito', {
+      name: 'MAIA SANTOS-DEGUITO', role: 'Former manager, RCBC Jupiter St branch', status: 'convicted', statusNote: 'Upheld on appeal, 2023',
+    }),
+    nameTag('name-kim-wong', 'L87 · Kim Wong', {
+      name: 'KIM WONG', role: 'Junket operator', status: { text: 'CHARGES DROPPED', color: 'green' }, statusNote: 'Denied the claims',
+    }),
+    nameTag('name-atiur-rahman', 'L91 · Atiur Rahman', {
+      name: 'ATIUR RAHMAN', role: 'Governor, Bangladesh Bank, until March 2016', status: 'official',
+    }),
+    nameTag('name-park-jin-hyok', 'L95 · Park Jin Hyok', {
+      name: 'PARK JIN HYOK', role: 'North Korean programmer', status: 'wanted', statusNote: 'North Korea denies the allegations',
+    }),
+  ],
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Unfiction GFX Toolkit — Gallery</title>
+<!--
+  One scene per component that the EP01 reel does not already show.
+  Use it as a visual reference and as a copy-paste source for new episodes.
+  Older scenes build their layers by hand; the newer ones use the UF.scenes presets.
+  Several scenes set `transition` so every in-scene transition type is on show.
+  Facts come from the EP01 research; anything invented is labelled ILLUSTRATION or carries a NOTE.
+-->
+<script src="../core/uf-core.js"></script>
+<script src="../core/uf-draw.js"></script>
+<script src="../core/uf-geo.js"></script>
+<script src="../components/uf-overlays.js"></script>
+<script src="../components/uf-timeline.js"></script>
+<script src="../components/uf-document.js"></script>
+<script src="../components/uf-network.js"></script>
+<script src="../components/uf-board.js"></script>
+<script src="../components/uf-chart.js"></script>
+<script src="../components/uf-worldmap.js"></script>
+<script src="../components/uf-reveal.js"></script>
+<script src="../components/uf-ledger.js"></script>
+<script src="../components/uf-chat.js"></script>
+<script src="../components/uf-phone.js"></script>
+<script src="../components/uf-route.js"></script>
+<script src="../components/uf-wall.js"></script>
+<script src="../components/uf-presets.js"></script>
+</head>
+<body>
+<script>
+'use strict';
+
+const counter = {
+  id: 'counter', title: 'Counter · big number with strike · flash out', duration: 7,
+  transition: { out: 'flash' },
+  layers: [
+    new UF.Background({ style: 'void' }),
+    new UF.Counter({ value: 951000000, prefix: '$', at: 0.3, dur: 2.4, size: 170, label: 'REQUESTED FROM ONE ACCOUNT', strike: 4.2 }),
+    new UF.SourceTag({ text: 'Reuters; BAE Systems, 2016', at: 0.6 }),
+  ],
+};
+
+const titleCard = UF.scenes.chapter({
+  id: 'title-card', title: 'TitleCard via UF.scenes.chapter · glitch', duration: 6, transition: 'glitch',
+  kicker: 'ACT 3', heading: 'THE NIGHT OF THE HEIST', sub: 'THURSDAY 4 FEBRUARY 2016',
+});
+
+const timeline = {
+  id: 'timeline', title: 'Timeline + TimeChip · wipe', duration: 12,
+  transition: 'wipe',
+  layers: [
+    new UF.Background({ style: 'grid' }),
+    new UF.TimeChip({ x: 96, y: 80, items: [
+      { at: 0.3, time: '10:30', date: 'FRIDAY 5 FEB', place: 'DHAKA' },
+      { at: 4.2, time: '12:30', date: 'SATURDAY 6 FEB', place: 'DHAKA' },
+      { at: 8.0, time: '9 FEB', date: 'TUESDAY', place: 'MANILA' },
+    ] }),
+    new UF.Timeline({ y: 620, at: 0.6, events: [
+      { at: 1.0, pos: 0.02, date: 'FRI 5 FEB', time: '10:30', text: 'Printer tray found empty' },
+      { at: 2.6, pos: 0.22, date: 'FRI 5 FEB', time: '11:15', text: 'Joint director leaves' },
+      { at: 4.2, pos: 0.45, date: 'SAT 6 FEB', time: '12:30', text: 'Messages printed by hand', color: 'red' },
+      { at: 5.8, pos: 0.62, date: 'SAT 6 FEB', time: '13:30', text: 'Email, fax, phone — no reply' },
+      { at: 7.0, pos: 0.80, date: 'MON 8 FEB', time: 'HOLIDAY', text: 'Lunar New Year in Manila' },
+      { at: 8.0, pos: 0.98, date: 'TUE 9 FEB', time: '$58M', text: 'Already withdrawn', color: 'red' },
+    ] }),
+    new UF.SourceTag({ text: 'Police complaint, via Reuters / Bloomberg / AFP, 2016; Philippine Daily Inquirer', at: 0.6 }),
+  ],
+};
+
+const email = {
+  id: 'email', title: 'EmailCard · recreated email', duration: 11,
+  pushIn: 0.02,
+  layers: [
+    new UF.Background({ style: 'void' }),
+    new UF.EmailCard({
+      from: 'Rasel Ahlam', to: 'Bangladesh Bank staff', subject: 'Job application', date: 'January 2015',
+      body: 'Dear Sir or Madam,\nI am writing to apply for a position at your organisation. You can download my CV and cover letter from the link below.\nThank you for your time.\nRasel Ahlam',
+      link: 'Download my CV and cover letter',
+      note: 'Recreation based on FBI complaint, 2018',
+      h: 560, at: 0.2, typeAt: 1.4, clickAt: 8.4,
+    }),
+  ],
+};
+
+const network = {
+  id: 'network', title: 'NetworkSpread · infection + wait timer · zoom in', duration: 14,
+  transition: { in: 'zoom' },
+  layers: [
+    new UF.Background({ style: 'grid' }),
+    new UF.Heading({ kicker: 'INSIDE THE BANK · 2015', at: 0.2, y: 80 }),
+    new UF.NetworkSpread({
+      start: [0, 4], target: { col: 8, row: 0, label: 'SWIFT TERMINAL', icon: 'server' },
+      startLabel: 'ONE INFECTED PC', at: 0.3, infectAt: 2, hop: 0.42,
+      wait: { label: 'WAITING', to: 12, unit: 'MONTHS', dur: 2.8 },
+    }),
+    new UF.SourceTag({ text: 'FBI complaint, 2018', at: 0.6 }),
+  ],
+};
+
+const documentReveal = UF.scenes.document({
+  id: 'document', title: 'DocumentReveal via UF.scenes.document · cut in', duration: 14,
+  transition: { in: 'cut' },
+  source: false, note: 'Sample text — not a real filing',
+  document: {
+    label: 'ILLUSTRATION',
+    docket: 'Case 1:00-cv-00000   Document 1   Filed 01/01/00   Page 4 of 31',
+    header: ['IN THE DISTRICT COURT', 'FOR THE EXAMPLE DISTRICT'],
+    title: 'EXAMPLE BANK v. JOHN DOES 1–20',
+    numbered: true,
+    body: [
+      'On the night of the transfer, the defendants used stolen credentials to send 12 payment orders worth $46 million from the plaintiff\'s account.',
+      'Nine of the orders were held for review. Three orders, worth $9.8 million, were paid out to accounts opened months earlier under false names.',
+      'The funds were withdrawn by a person identified only as John Doe 7 and moved through two currency exchanges within days.',
+    ],
+    highlights: [{ find: '12 payment orders worth $46 million', at: 3.2, dur: 0.9 }],
+    redactions: [{ find: 'John Doe 7', at: 9.6 }],
+    marks: [{ find: 'Three orders, worth $9.8 million', at: 7.0 }],
+    camera: [
+      { t: 0, center: [960, 540], zoom: 1 },
+      { t: 2.2, find: '12 payment orders', zoom: 1.9, dur: 1.4 },
+      { t: 6.2, find: 'Three orders, worth $9.8 million', zoom: 1.9, dur: 1.2 },
+      { t: 8.8, find: 'John Doe 7', zoom: 2.1, dur: 1.1 },
+      { t: 11.6, center: [960, 540], zoom: 1, dur: 1.6 },
+    ],
+  },
+});
+
+const ledger = UF.scenes.ledger({
+  id: 'ledger', title: 'Ledger via UF.scenes.ledger', duration: 10,
+  kicker: 'HOW A MULE ACCOUNT LOOKS', heading: 'In and out within days',
+  source: false,
+  ledger: {
+    label: 'ILLUSTRATION', note: 'Illustrative figures — not a real account',
+    bank: 'EXAMPLE NATIONAL BANK', holder: 'ACME TRADING LTD', account: '•••• 4471', period: '01 FEB – 10 FEB 2016',
+    opening: 500, visible: 6,
+    rows: [
+      { date: '01 FEB', text: 'ACCOUNT MAINTENANCE FEE', debit: 12.5 },
+      { date: '03 FEB', text: 'CASH DEPOSIT — BRANCH 0412', credit: 1000 },
+      { date: '04 FEB', text: 'INWARD SWIFT — FEDERAL RESERVE BANK OF NEW YORK, PAYMENT ORDER 0047', credit: 20000000 },
+      { date: '05 FEB', text: 'CASH WITHDRAWAL — BRANCH 0412', debit: 5000000 },
+      { date: '05 FEB', text: 'TRANSFER TO FX REMITTANCE CO', debit: 14000000, flag: 'SAME DAY' },
+      { date: '06 FEB', text: 'CASH WITHDRAWAL — BRANCH 0412', debit: 980000 },
+      { date: '08 FEB', text: 'TRANSFER TO FX REMITTANCE CO', debit: 19000, flag: { text: 'UNDER REVIEW', color: 'amber' } },
+      { date: '10 FEB', text: 'ACCOUNT FROZEN' },
+    ],
+  },
+});
+
+const chat = UF.scenes.chat({
+  id: 'chat', title: 'ChatThread via UF.scenes.chat', duration: 16,
+  source: false,
+  chat: {
+    label: 'ILLUSTRATION', note: 'Example conversation — not real messages',
+    contact: 'Bank Security Team', sub: '+44 •••• 0192', initials: 'BS',
+    messages: [
+      { divider: 'Today' },
+      { from: 'them', text: 'This is the fraud team at your bank. We have blocked a payment of £1,840 from your account.', time: '10:02' },
+      { from: 'them', text: 'Did you make this payment? Reply YES or NO.', time: '10:02', typing: 0.7 },
+      { from: 'me', text: 'NO', time: '10:03', read: true },
+      { from: 'them', text: 'Your account is at risk. Please move your balance to a safe account we will give you.', time: '10:04', mark: 11.5 },
+      { from: 'me', text: 'Ok. What details do you need?', time: '10:05', read: true },
+      { from: 'them', text: 'Account name: SAFE HOLDING 7. Sort code 00-00-00.', time: '10:05' },
+    ],
+  },
+});
+
+const call = UF.scenes.call({
+  id: 'call', title: 'PhoneCall via UF.scenes.call', duration: 15,
+  source: false,
+  call: {
+    label: 'ILLUSTRATION', note: 'Example call — not a real recording',
+    name: 'Unknown caller', number: '+00 •••• 1180', place: 'Overseas', date: 'Friday',
+    ringAt: 1.2, answerAt: 4.0, endAt: 12.5, callLength: 252,
+    transcript: [
+      { at: 4.9, speaker: 'Caller', text: 'The money has arrived. You need to withdraw it today.' },
+      { at: 7.6, speaker: 'Account holder', text: 'All of it? In cash?' },
+      { at: 9.4, speaker: 'Caller', text: 'All of it. Someone will come to collect.' },
+    ],
+  },
+});
+
+const route = UF.scenes.route({
+  id: 'route', title: 'RouteMap via UF.scenes.route · zoom', duration: 15,
+  transition: 'zoom',
+  source: false, note: 'Illustrative route — example data',
+  route: {
+    vehicle: 'jet',
+    stops: [
+      { place: 'LONDON', date: 'DAY 1', sub: 'Departs', icon: 'jet' },
+      { place: 'SINGAPORE', date: 'DAY 2', sub: 'Meets courier' },
+      { place: 'MANILA', date: 'DAY 4', sub: 'Cash withdrawn', icon: 'cash' },
+      { place: 'MACAU', date: 'DAY 6', sub: 'Casino', icon: 'casino' },
+    ],
+  },
+});
+
+/* Drawn placeholder portraits, so the wall shows real image tiles without using anyone's photo. */
+function portrait(shirt, hair) {
+  const cv = document.createElement('canvas');
+  cv.width = 480; cv.height = 720;
+  const x = cv.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 720);
+  g.addColorStop(0, '#7d8fa3'); g.addColorStop(1, '#3d4652');
+  x.fillStyle = g; x.fillRect(0, 0, 480, 720);
+  x.fillStyle = shirt; x.beginPath(); x.ellipse(240, 720, 230, 210, 0, Math.PI, 0); x.fill();
+  x.fillStyle = '#c99c7f'; x.fillRect(205, 400, 70, 110);
+  x.beginPath(); x.ellipse(240, 330, 105, 135, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = hair; x.beginPath(); x.ellipse(240, 245, 112, 70, 0, Math.PI, 0); x.fill();
+  x.fillStyle = '#2a2220'; x.beginPath(); x.arc(200, 330, 9, 0, Math.PI * 2); x.arc(280, 330, 9, 0, Math.PI * 2); x.fill();
+  return cv.toDataURL('image/jpeg', 0.9);
+}
+UF.addImages({ galleryPortraitA: portrait('#1f3b5a', '#2b1d14'), galleryPortraitB: portrait('#5a1f1f', '#6b5a48') });
+
+const wall = UF.scenes.wall({
+  id: 'wall', title: 'PhotoWall via UF.scenes.wall · glitch out', duration: 9,
+  transition: { out: 'glitch' },
+  source: false, note: 'Illustrative portraits — not real people',
+  wall: {
+    label: 'ILLUSTRATION', title: 'ACCOUNT HOLDERS · 8', focus: 'e',
+    tiles: [
+      { id: 'a', name: 'Person A', sub: 'Account opener' },
+      { id: 'b', name: 'Person B', sub: 'Account opener', image: 'galleryPortraitA' },
+      { id: 'c', name: 'Person C', sub: 'Driver' },
+      { id: 'd', name: 'Person D', sub: 'Account opener' },
+      { id: 'e', name: 'Person E', sub: 'Branch manager', image: 'galleryPortraitB', status: 'charged', note: 'Denies wrongdoing' },
+      { id: 'f', name: 'Person F', sub: 'Remittance agent' },
+      { id: 'g', name: 'Person G', sub: 'Account opener' },
+      { id: 'h', name: 'Person H', sub: 'Casino junket' },
+    ],
+  },
+});
+
+const people = {
+  id: 'people', title: 'LowerThird styles · StatusBadge · Caption', duration: 9,
+  layers: [
+    new UF.Background({ style: 'grid' }),
+    new UF.SourceTag({ label: 'NOTE', text: 'Fictional names and quotes — layout example', x: UF.W / 2, y: 60, align: 'center', at: 0.3 }),
+    new UF.LowerThird({ at: 0.3, name: 'Jane Example', role: 'Former branch manager', style: 'bar', status: 'charged', statusNote: 'Denies the charges', y: 560 }),
+    new UF.LowerThird({ at: 0.6, name: 'John Sample', role: 'Remittance agent', style: 'minimal', status: 'convicted', align: 'right', x: UF.W - 96, y: 560 }),
+    new UF.LowerThird({ at: 0.9, name: 'Alex Placeholder', role: 'Bank investigator', style: 'tag', status: 'witness', y: 150 }),
+    new UF.StatusBadge({ at: 1.2, status: 'acquitted', note: 'Cleared on appeal, 2019', align: 'right', x: UF.W - 96, y: 190 }),
+    new UF.Caption({ at: 1.5, out: 5, style: 'subtitle', note: 'Translated', y: UF.H - 110,
+      lines: [{ at: 1.5, text: 'I thought the call was from my bank. The number matched the one on my card.', speaker: 'Example speaker' }] }),
+    new UF.Caption({ at: 5.4, style: 'quote', y: UF.H - 110, text: 'They had an answer for every question we asked.', speaker: 'Example investigator' }),
+  ],
+};
+
+const overlays = {
+  id: 'overlays', title: 'LowerThird · DramaLabel · Stamp · Disclaimer', duration: 13,
+  layers: [
+    new UF.Background({ style: 'desk' }),
+    new UF.LowerThird({ name: 'ZUBAIR BIN HUDA', role: 'JOINT DIRECTOR · BANGLADESH BANK', at: 0.4, out: 3.4 }),
+    new UF.DramaLabel({ at: 0.3, out: 3.5 }),
+    new UF.Stamp({ text: 'REJECTED', at: 4.2, out: 6.4, size: 110 }),
+    new UF.Disclaimer({
+      title: 'PLEASE NOTE',
+      text: 'These are charges. A defendant is presumed innocent unless proven guilty. North Korea denies the allegations.',
+      at: 7.0,
+    }),
+  ],
+};
+
+const board = {
+  id: 'evidence-board', title: 'EvidenceBoard · pinned cards and string', duration: 16,
+  pushIn: 0,
+  // FRAUDULENT is stamped on the payment order, which is a fact; no person's card carries a stamp.
+  ignore: ['stamp-near-person'],
+  layers: [
+    new UF.EvidenceBoard({
+      cards: [
+        { id: 'holder', kind: 'photo', x: 330, y: 330, title: 'ACCOUNT HOLDER', sub: 'Name withheld', at: 0.6 },
+        { id: 'may', kind: 'note', x: 790, y: 290, title: '15 MAY 2015', text: 'Four accounts opened at one branch with $500 each', at: 1.3 },
+        { id: 'order', kind: 'doc', x: 1250, y: 330, title: 'Payment order', sub: 'MT103 · FEB 2016', at: 2.0,
+          stamp: { text: 'FRAUDULENT', at: 11.4 } },
+        { id: 'casino', kind: 'photo', x: 1650, y: 340, icon: 'casino', title: 'MANILA CASINOS', sub: 'Junket operators', at: 2.7 },
+        { id: 'sum', kind: 'tag', x: 560, y: 770, title: '$81M', sub: 'REACHED MANILA', at: 3.4 },
+        { id: 'lanka', kind: 'note', x: 1130, y: 740, title: 'SRI LANKA · $20M', text: '"Fundation": one misspelt word stopped this payment', at: 4.1,
+          mark: { at: 10.0 } },
+      ],
+      strings: [
+        { from: 'holder', to: 'may', at: 4.8, label: 'OPENED' },
+        { from: 'may', to: 'sum', at: 5.4 },
+        { from: 'order', to: 'sum', at: 6.0, label: '5 PAID' },
+        { from: 'sum', to: 'casino', at: 6.6, label: 'TO CASINOS' },
+        { from: 'order', to: 'lanka', at: 7.2, label: 'STOPPED' },
+      ],
+      camera: [
+        { t: 0, center: [960, 540], zoom: 1 },
+        { t: 8.6, center: [1190, 540], zoom: 1.4, dur: 1.6 },
+        { t: 13.4, center: [960, 540], zoom: 1, dur: 1.5 },
+      ],
+      focus: [{ at: 9.2, dur: 3.9, ids: ['order', 'lanka'] }],
+    }),
+    new UF.SourceTag({ text: 'Reuters, 2016; Philippine Daily Inquirer; Philippine Senate testimony', at: 0.6, backing: true }),
+  ],
+};
+
+const lineChart = {
+  id: 'line-chart', title: 'LineChart · two series and a marker', duration: 11,
+  layers: [
+    new UF.Background({ style: 'grid' }),
+    new UF.Heading({ kicker: 'HOW A PONZI SCHEME DIES', title: 'What investors saw vs what was there', at: 0.2, y: 80 }),
+    new UF.LineChart({
+      y: 230, h: 700, at: 0.3, yFormat: 'money', yLabel: 'USD',
+      series: [
+        { label: 'REPORTED BALANCE', color: 'paper', at: 1.2, dur: 4,
+          points: [[2002, 7e9], [2003, 9.5e9], [2004, 13e9], [2005, 17e9], [2006, 23e9], [2007, 31e9], [2008, 41e9]] },
+        { label: 'ACTUAL CASH', color: 'red', area: true, at: 2.2, dur: 4,
+          points: [[2002, 4e9], [2003, 3.6e9], [2004, 3.1e9], [2005, 2.4e9], [2006, 1.9e9], [2007, 1.1e9], [2008, 0.3e9]] },
+      ],
+      markers: [{ x: 2008, at: 7.0, label: 'COLLAPSE', series: 1 }],
+    }),
+    new UF.SourceTag({ label: 'NOTE', text: 'Illustrative figures', at: 0.6 }),
+  ],
+};
+
+const barChart = UF.scenes.chart({
+  id: 'bar-chart', title: 'BarChart via UF.scenes.chart', duration: 10,
+  kicker: 'THE $951M ATTEMPT', heading: 'Where the payment orders ended up',
+  source: 'Reuters; BAE Systems, 2016', sourceAt: 0.6,
+  chart: {
+    type: 'bar', format: 'money',
+    bars: [
+      { label: 'REQUESTED', value: 951e6, sub: '35 orders' },
+      { label: 'BLOCKED', value: 850e6, sub: '30 orders' },
+      { label: 'PAID OUT', value: 101e6, sub: '5 orders' },
+      { label: 'STOPPED IN SRI LANKA', value: 20e6 },
+      { label: 'SENT TO PHILIPPINES', value: 81e6, highlight: { at: 6.5, label: 'TRACED TO CASINOS' } },
+    ],
+  },
+});
+
+const ranking = {
+  id: 'ranking', title: 'BarChart · horizontal ranking', duration: 9,
+  layers: [
+    new UF.Background({ style: 'grid' }),
+    new UF.Heading({ kicker: 'MANILA · FEBRUARY 2016', title: 'Where the $81M went', at: 0.2, y: 80 }),
+    new UF.BarChart({
+      orientation: 'horizontal', sort: 'desc', y: 300, h: 520, labelW: 460, at: 0.3, format: 'money',
+      bars: [
+        { label: 'SOLAIRE CASINO', sub: 'Bloomberry resort', value: 29e6, display: '≈ $29M' },
+        { label: 'EASTERN HAWAII LEISURE', sub: 'Company account', value: 21e6, display: '≈ $21M' },
+        { label: 'JUNKET OPERATOR', sub: 'Individual', value: 30e6, display: '≈ $30M', highlight: { at: 5.5, label: 'IN CASH' } },
+      ],
+    }),
+    new UF.SourceTag({ text: 'Philippine Senate testimony, as reported by ABS-CBN, March 2016', at: 0.6 }),
+  ],
+};
+
+new UF.Stage({
+  title: 'UNFICTION · TOOLKIT GALLERY',
+  slug: 'uf-gallery',
+  scenes: [counter, titleCard, timeline, email, network, documentReveal, ledger, chat, call, route, wall, people,
+           overlays, board, lineChart, barChart, ranking],
+});
+</script>
+</body>
+</html>

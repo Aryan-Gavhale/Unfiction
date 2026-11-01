@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EPxx — GFX</title>
+<!--
+  Unfiction · episode GFX template
+  Copy this file to episodes/EPxx-short-name/gfx-scenes.html. The script paths work from
+  there unchanged, because that folder sits at the same depth as toolkit/examples/.
+
+  SPACE play/pause · R restart · ←/→ previous/next scene · 1-9 jump · H HUD
+  E export (whole reel, or one scene when ?scene=N) · SHIFT+E export every scene as its own file
+  S save a PNG still · F fullscreen · T thumbnail · C cue sheet · K editorial check
+
+  URL options:  ?scene=2  solo one scene      ?frame=4.5  freeze at a time (scene-local with ?scene)
+                ?autoplay ?loop               ?scale=2    render at 3840x2160      ?key  green screen, no film look
+
+  Scene options besides id / title / duration / layers:
+    transition  'fade' (default) | 'cut' | 'glitch' | 'wipe' | 'flash' | 'zoom', or { in, out, dur }
+    pushIn      slow camera push across the scene (default 0.03; 0 for none)
+    factual / source / label / ignore   editorial-check hints (see README, "Editorial check")
+  Presets (UF.scenes.chapter, .chart, .document, .ledger, .chat, .call, .route, .wall, .board)
+  build a whole scene with its background and source line; see scene 3 below.
+
+  Before export, run:  python ../../toolkit/tools/check.py gfx-scenes.html
+  For the edit:        python ../../toolkit/tools/cues.py gfx-scenes.html      (hit and glitch cue sheet)
+                       python ../../toolkit/tools/contact_sheet.py gfx-scenes.html
+  Thumbnails live in their own page: copy ../../toolkit/examples/thumbnail-template.html.
+
+  Real photos: python ../../toolkit/tools/embed_images.py images.js photos/
+  then uncomment the images.js line below.
+-->
+<script src="../../toolkit/core/uf-core.js"></script>
+<!-- <script src="images.js"></script> -->
+<script src="../../toolkit/core/uf-draw.js"></script>
+<script src="../../toolkit/core/uf-geo.js"></script>
+<script src="../../toolkit/components/uf-overlays.js"></script>
+<script src="../../toolkit/components/uf-worldmap.js"></script>
+<script src="../../toolkit/components/uf-clocks.js"></script>
+<script src="../../toolkit/components/uf-flow.js"></script>
+<script src="../../toolkit/components/uf-quote.js"></script>
+<script src="../../toolkit/components/uf-code.js"></script>
+<script src="../../toolkit/components/uf-timeline.js"></script>
+<script src="../../toolkit/components/uf-document.js"></script>
+<script src="../../toolkit/components/uf-network.js"></script>
+<script src="../../toolkit/components/uf-board.js"></script>
+<script src="../../toolkit/components/uf-chart.js"></script>
+<script src="../../toolkit/components/uf-reveal.js"></script>
+<script src="../../toolkit/components/uf-ledger.js"></script>
+<script src="../../toolkit/components/uf-chat.js"></script>
+<script src="../../toolkit/components/uf-phone.js"></script>
+<script src="../../toolkit/components/uf-route.js"></script>
+<script src="../../toolkit/components/uf-wall.js"></script>
+<script src="../../toolkit/components/uf-presets.js"></script>
+</head>
+<body>
+<script>
+'use strict';
+
+const D = UF.draw;
+
+/* ==================================================================== */
+/* Scene 1 — chapter card from a preset, with a glitch in and out       */
+/* ==================================================================== */
+function sceneChapter() {
+  return UF.scenes.chapter({
+    id: 'chapter',
+    title: 'L00 · Chapter card',
+    kicker: 'ACT 1', heading: 'CHAPTER TITLE', sub: 'DATE · PLACE',
+    transition: 'glitch',
+  });
+}
+
+/* ==================================================================== */
+/* Scene 2 — one-off visual drawn with UF.layer and the draw helpers    */
+/* ==================================================================== */
+function sceneNoReply() {
+  const B = {
+    first: 1.0,     // first icon appears
+    step: 1.4,      // gap between icons
+    noReply: 0.8,   // red cross lands this long after its icon
+    end: 7,
+  };
+  const items = [['email', 'EMAIL'], ['fax', 'FAX'], ['phone', 'PHONE']];
+  return {
+    id: 'no-reply',
+    title: 'L00 · Email, fax, phone — no reply',
+    duration: B.end,
+    transition: { in: 'fade', out: 'wipe' },
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'SATURDAY · 6 FEB', title: 'Nobody answered', at: 0.2 }),
+      UF.layer((ctx, t, fx) => {
+        items.forEach(([icon, label], i) => {
+          const at = B.first + i * B.step;
+          const a = UF.ease.outCubic(UF.seg(t, at, 0.5));
+          if (a <= 0) return;
+          const x = UF.W / 2 + (i - 1) * 380, y = 560 + (1 - a) * 30;
+          ctx.globalAlpha = a;
+          D.panel(ctx, x - 140, y - 150, 280, 300, { tick: 16 });
+          D.icon(ctx, icon, x, y - 30, 120);
+          D.text(ctx, label, x, y + 100, { font: UF.font.mono(22, 'bold'), color: UF.c('dim'), spacing: 6, align: 'center' });
+
+          const crossAt = at + B.noReply;
+          const k = UF.seg(t, crossAt, 0.25);
+          if (k > 0) {
+            fx.kick(t, crossAt, { shake: 0.006, rgb: 0.5, decay: 10 });
+            D.icon(ctx, 'cross', x, y - 30, 170 * UF.lerp(1.5, 1, UF.ease.outBack(k)), { color: UF.c('red'), width: 9 });
+          }
+        });
+        ctx.globalAlpha = 1;
+      }),
+      new UF.SourceTag({ text: 'Source name, year', at: 0.6 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* Scene 3 — chart from a preset: heading, chart and source in one call */
+/* ==================================================================== */
+function sceneChart() {
+  return UF.scenes.chart({
+    id: 'chart',
+    title: 'L00 · Bar chart',
+    duration: 9,
+    kicker: 'KICKER', heading: 'What the chart shows',
+    source: 'Source name, year',
+    chart: {
+      type: 'bar', format: 'money',
+      bars: [
+        { label: 'FIRST', value: 120e6 },
+        { label: 'SECOND', value: 80e6, highlight: { at: 4.5, label: 'KEY POINT' } },
+        { label: 'THIRD', value: 30e6 },
+      ],
+    },
+  });
+}
+
+new UF.Stage({
+  title: 'EPxx · EPISODE NAME',
+  slug: 'epxx',
+  scenes: [sceneChapter(), sceneNoReply(), sceneChart()],
+});
+</script>
+</body>
+</html>

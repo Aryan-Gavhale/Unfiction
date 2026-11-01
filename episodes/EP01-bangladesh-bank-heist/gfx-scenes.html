@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EP01 — Bangladesh Bank Heist — GFX</title>
+<!--
+  Unfiction · EP01 · GFX scenes
+  Every GFX and CARD shot from the script that the toolkit can build, in script order, separated by black.
+  Overlays for the Blender shots (Dramatisation label, time chips, name tags) are in overlays.html.
+  Open in Chrome or Edge.
+
+  SPACE play/pause · R restart · ←/→ previous/next scene · 1-9 jump · H HUD
+  E export (whole reel, or one scene when ?scene=N) · SHIFT+E export every scene as its own file
+  S save a PNG still · F fullscreen · T thumbnail · C cue sheet · K editorial check
+
+  URL options:  ?scene=3  solo one scene      ?frame=4.5  freeze at a time (scene-local with ?scene)
+                ?autoplay ?loop               ?scale=2    render at 3840x2160      ?key  green screen, no film look
+
+  To retime a scene to your voice-over, change the numbers in its BEATS block only.
+-->
+<script src="../../toolkit/core/uf-core.js"></script>
+<script src="../../toolkit/core/uf-draw.js"></script>
+<script src="../../toolkit/core/uf-geo.js"></script>
+<script src="../../toolkit/components/uf-overlays.js"></script>
+<script src="../../toolkit/components/uf-worldmap.js"></script>
+<script src="../../toolkit/components/uf-clocks.js"></script>
+<script src="../../toolkit/components/uf-flow.js"></script>
+<script src="../../toolkit/components/uf-quote.js"></script>
+<script src="../../toolkit/components/uf-code.js"></script>
+<script src="../../toolkit/components/uf-timeline.js"></script>
+<script src="../../toolkit/components/uf-document.js"></script>
+<script src="../../toolkit/components/uf-network.js"></script>
+<script src="../../toolkit/components/uf-ledger.js"></script>
+<script src="../../toolkit/components/uf-factcard.js"></script>
+<script src="../../toolkit/components/uf-calendar.js"></script>
+<script src="../../toolkit/components/uf-compare.js"></script>
+<script src="../../toolkit/components/uf-nightmap.js"></script>
+<script src="../../toolkit/components/uf-endscreen.js"></script>
+<script src="../../toolkit/components/uf-presets.js"></script>
+</head>
+<body>
+<script>
+'use strict';
+
+const D = UF.draw;
+const MAKATI = [121.03, 14.55];
+
+function chapter(n, heading, sub) {
+  return UF.scenes.chapter({ id: `act-${n}`, title: `Act ${n} · ${heading}`, kicker: `ACT ${n}`, heading, sub, transition: 'glitch' });
+}
+
+const cardDesk = () => new UF.Background({ style: 'desk', glow: 'rgba(217,164,65,.05)' });
+
+/* ==================================================================== */
+/* L02 · $951,000,000                                                   */
+/* ==================================================================== */
+function sceneColdOpenNumber() {
+  const B = {
+    count: 0.3,   // L02  the number starts counting
+    dur: 1.6,     //      counts up fast, then freezes on the bass hit
+    source: 2.2,
+    end: 5.5,     //      "...Almost everything in one account."
+  };
+  return {
+    id: 'cold-open-951m',
+    title: 'L02 · $951,000,000',
+    duration: B.end,
+    transition: { in: 'cut', out: 'fade' },
+    pushIn: 0.02,
+    layers: [
+      new UF.Background({ style: 'void', dust: false }),
+      new UF.Counter({ value: 951e6, prefix: '$', at: B.count, dur: B.dur, size: 170, label: '35 PAYMENT ORDERS · ONE NIGHT' }),
+      new UF.SourceTag({ text: 'BAE Systems; Reuters, 2016', at: B.source }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L05 / L65 · The duty officer's statement                             */
+/* ==================================================================== */
+function sceneQuote() {
+  const B = { card: 0.2, type: 1.3, source: 6.2, end: 12 };
+  return {
+    id: 'police-quote',
+    title: 'L05 · "A common problem"',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      new UF.Background({ style: 'desk', glow: 'rgba(217,164,65,.06)' }),
+      new UF.QuoteCard({
+        quote: 'We thought it was a common problem, just like any other day.',
+        highlight: 'a common problem',
+        attribution: '— Duty officer, Bangladesh Bank',
+        header: 'STATEMENT TO POLICE', headerRight: 'EXCERPT',
+        at: B.card, typeAt: B.type, cps: 20,
+      }),
+      new UF.SourceTag({ text: 'Police complaint, as reported by Bloomberg / AFP, March 2016', at: B.source, x: UF.W / 2, align: 'center', y: UF.H - 64 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L07 · Flash cuts: a street sign, a typo, casinos, a wanted poster    */
+/* ==================================================================== */
+const CHIPS = { red: ['#c0262f', '#7c161c'], black: ['#2a2d32', '#111215'], amber: ['#d29a34', '#8e6420'], white: ['#ebe6da', '#a8a295'] };
+
+/** (x, y) is the centre of the bottom chip's lower face; only the top chip shows its face. */
+function chipStack(ctx, x, y, n, [face, side], rx = 74) {
+  const ry = rx * 0.34, hh = 14;
+  const mark = face === CHIPS.white[0] ? 'rgba(170,32,40,.9)' : 'rgba(255,255,255,.72)';
+  const shade = ctx.createLinearGradient(x - rx, 0, x + rx, 0);
+  shade.addColorStop(0, 'rgba(0,0,0,.45)');
+  shade.addColorStop(0.35, 'rgba(0,0,0,0)');
+  shade.addColorStop(0.75, 'rgba(0,0,0,.1)');
+  shade.addColorStop(1, 'rgba(0,0,0,.5)');
+  const band = cy => {
+    ctx.beginPath();
+    ctx.ellipse(x, cy, rx, ry, 0, 0, Math.PI);
+    ctx.lineTo(x - rx, cy - hh);
+    ctx.ellipse(x, cy - hh, rx, ry, 0, Math.PI, 0, true);
+    ctx.closePath();
+  };
+  for (let i = 0; i < n; i++) {
+    const cy = y - i * hh;
+    band(cy);
+    ctx.fillStyle = side;
+    ctx.fill();
+    ctx.fillStyle = mark;
+    const turn = (i * 0.83) % 1.1;
+    for (let k = 0; k < 5; k++) {
+      const a0 = 0.25 + turn * 0.5 + k * 0.62, a1 = a0 + 0.17;
+      if (a1 > Math.PI - 0.08) continue;
+      ctx.beginPath();
+      ctx.moveTo(x + rx * Math.cos(a0), cy - hh + ry * Math.sin(a0) + 3);
+      ctx.lineTo(x + rx * Math.cos(a1), cy - hh + ry * Math.sin(a1) + 3);
+      ctx.lineTo(x + rx * Math.cos(a1), cy + ry * Math.sin(a1) - 3);
+      ctx.lineTo(x + rx * Math.cos(a0), cy + ry * Math.sin(a0) - 3);
+      ctx.closePath();
+      ctx.fill();
+    }
+    band(cy);
+    ctx.fillStyle = shade;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.4)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(x, cy - hh, rx, ry, 0, 0, Math.PI);
+    ctx.stroke();
+  }
+  const ty = y - n * hh;
+  ctx.fillStyle = face;
+  ctx.beginPath();
+  ctx.ellipse(x, ty, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.22)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.strokeStyle = mark;
+  ctx.lineWidth = 3;
+  ctx.setLineDash([10, 9]);
+  ctx.beginPath();
+  ctx.ellipse(x, ty, rx * 0.84, ry * 0.84, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(x, ty, rx * 0.52, ry * 0.52, 0, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+let wantedSprite = null;
+function wantedPoster() {
+  if (wantedSprite) return wantedSprite;
+  const w = 560, h = 760, raw = UF.canvas(w, h), x = raw.getContext('2d');
+  x.drawImage(D.paperTexture(w, h, 41), 0, 0);
+  x.strokeStyle = UF.c('red');
+  x.lineWidth = 10;
+  x.strokeRect(14, 14, w - 28, h - 28);
+  x.font = UF.font.display(132);
+  D.text(x, 'WANTED', w / 2, 170, { color: UF.c('red'), spacing: 6, align: 'center' });
+  x.font = UF.font.mono(30, 'bold');
+  D.text(x, 'BY THE FBI', w / 2, 222, { color: '#1d1b18', spacing: 10, align: 'center' });
+  x.fillStyle = '#a19d93';
+  x.fillRect(110, 262, 340, 330);
+  D.icon(x, 'user', w / 2, 440, 250, { color: '#4a4740', width: 4 });
+  x.fillStyle = 'rgba(29,27,24,.55)';
+  for (const [lw, ly] of [[380, 632], [300, 666], [340, 700]]) x.fillRect((w - lw) / 2, ly, lw, 12);
+  const out = UF.canvas(w + 40, h + 40), o = out.getContext('2d');
+  o.filter = 'blur(5px)';
+  o.drawImage(raw, 20, 20);
+  return (wantedSprite = out);
+}
+
+function sceneFlashCuts() {
+  const B = {
+    sign: 0.2,    // L07  "A street sign."
+    typo: 1.3,    //      "A spelling mistake."
+    chips: 2.5,   //      "Casinos."
+    wanted: 3.4,  //      "And a hacker the FBI says works for one of the most secretive countries on Earth."
+    hold: 0.55,   //      each flash stays up this long; the last one holds to the end
+    end: 8,
+  };
+  const spot = (ctx, x, y, r, color) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, UF.W, UF.H);
+  };
+  const stacks = [[700, 690, 7, CHIPS.red], [1220, 680, 9, CHIPS.black], [960, 750, 12, CHIPS.amber], [1460, 770, 5, CHIPS.white],
+    [560, 800, 4, CHIPS.black], [830, 850, 3, CHIPS.red], [1130, 860, 6, CHIPS.red]];
+  const shots = [
+    [B.sign, ctx => {
+      spot(ctx, 960, 470, 760, 'rgba(58,110,165,.24)');
+      D.sign(ctx, 'JUPITER ST', 960, 450, { size: 130, angle: -3, pole: 700 });
+    }],
+    [B.typo, (ctx, lt) => {
+      spot(ctx, 960, 540, 820, 'rgba(217,164,65,.14)');
+      ctx.translate(960, 540);
+      ctx.rotate(-0.035);
+      ctx.drawImage(D.paperTexture(1240, 300, 23), -620, -150);
+      ctx.font = UF.font.type(96, 'bold');
+      const a = 'SHALIKA ', b = 'FUNDATION', wa = D.measure(ctx, a), wb = D.measure(ctx, b), x0 = -(wa + wb) / 2;
+      D.text(ctx, a + b, x0, 34, { color: '#1d1b18' });
+      D.circleMark(ctx, x0 + wa + wb / 2, 0, wb / 2 + 40, 86, UF.ease.outCubic(UF.clamp(lt / 0.35)), { color: UF.c('red'), width: 9, seed: 4 });
+    }],
+    [B.chips, ctx => {
+      spot(ctx, 960, 680, 760, 'rgba(193,18,31,.2)');
+      for (const [x, y, n, col] of stacks) chipStack(ctx, x, y, n, col);
+    }],
+    [B.wanted, ctx => {
+      spot(ctx, 960, 540, 720, 'rgba(193,18,31,.28)');
+      const img = wantedPoster();
+      ctx.drawImage(img, 960 - img.width / 2, 540 - img.height / 2);
+    }],
+  ];
+  return {
+    id: 'flash-cuts',
+    title: 'L07 · Flash cuts',
+    duration: B.end,
+    transition: { in: 'cut', out: 'glitch' },
+    pushIn: 0,
+    layers: [
+      new UF.Background({ style: 'void', dust: false }),
+      UF.layer((ctx, t, fx) => {
+        shots.forEach(([at, drawShot], i) => {
+          const last = i === shots.length - 1, lt = t - at;
+          if (lt < 0 || (!last && lt >= B.hold)) return;
+          fx.kick(t, at, { glitch: 0.7, glitchDur: 0.08, rgb: 0.9, flash: 0.25, decay: 12 });
+          const s = last ? 1 + 0.05 * UF.ease.inOutSine(UF.clamp(lt / (B.end - at))) : 1.08 - 0.08 * UF.ease.outCubic(UF.clamp(lt / B.hold));
+          ctx.save();
+          ctx.translate(UF.W / 2, UF.H / 2);
+          ctx.scale(s, s);
+          ctx.translate(-UF.W / 2, -UF.H / 2);
+          drawShot(ctx, lt);
+          ctx.restore();
+        });
+      }),
+      new UF.DramaLabel({ text: 'ILLUSTRATION', corner: 'br' }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L11 · The reserves are kept in New York                              */
+/* ==================================================================== */
+function sceneReservesInNewYork() {
+  const B = {
+    dhaka: 0.9,   // L11  "Bangladesh Bank..."
+    arc: 2.2,     //      "...keeps US dollars in an account..."
+    fed: 3.8,     //      "...at the Federal Reserve Bank of New York."
+    end: 10,
+  };
+  return {
+    id: 'reserves-new-york',
+    title: 'L11 · Reserves in New York',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Background({ style: 'void', dust: true }),
+      new UF.WorldMap({
+        reveal: { at: 0, dur: 1.4 },
+        camera: [{ t: 0, center: [8, 26], zoom: 1 }],
+        pins: [
+          { place: 'DHAKA',    label: 'DHAKA', sub: 'BANGLADESH BANK', at: B.dhaka, side: 'right', icon: 'bank' },
+          { place: 'NEW YORK', label: 'FEDERAL RESERVE BANK OF NEW YORK', sub: "BANGLADESH'S US DOLLAR ACCOUNT", at: B.fed, side: 'bottom', icon: 'vault' },
+        ],
+        arcs: [{ from: 'DHAKA', to: 'NEW YORK', at: B.arc, dur: 1.6, lift: 0.16, label: 'US DOLLAR RESERVES', labelAt: 0.5 }],
+      }),
+      new UF.Heading({ kicker: 'BANGLADESH BANK · THE RESERVES', x: 96, y: 72, at: 0.3 }),
+      new UF.SourceTag({ text: 'Reuters, 2016', at: B.fed }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L16 · Back to January 2015                                           */
+/* ==================================================================== */
+function sceneRollBack() {
+  const B = {
+    card: 0.2,      // L16  "And that's exactly where this story really begins."
+    flip: 1.4,      //      "Not in 2016..." — thirteen months fly back
+    flipDur: 1.8,
+    caption: 3.4,   //      "...but more than a year earlier."
+    inbox: 4.6,     //      an email arrives (leads into L17)
+    end: 7.5,
+  };
+  return {
+    id: 'roll-back',
+    title: 'L16 · Back to January 2015',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'void', dust: true }),
+      new UF.CalendarFlip({
+        from: 'FEB 2016', to: 'JAN 2015', at: B.card, flipAt: B.flip, flipDur: B.flipDur,
+        kicker: 'THE STORY STARTS', caption: 'MORE THAN A YEAR BEFORE THE HEIST', captionAt: B.caption, y: 500,
+      }),
+      UF.layer((ctx, t) => {
+        const k = UF.ease.outCubic(UF.seg(t, B.inbox, 0.5));
+        if (k <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = k;
+        const x = UF.W - 96 + (1 - k) * 60, y = 960;
+        const w = D.pill(ctx, '1 NEW MESSAGE', x, y, { align: 'right', fill: UF.c('black', 0.85), stroke: UF.c('blue'), font: UF.font.mono(20, 'bold'), h: 52, padX: 22 });
+        D.icon(ctx, 'email', x - w - 40, y, 44, { color: UF.c('blue'), width: 5 });
+        ctx.restore();
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L18 · The CV email                                                   */
+/* ==================================================================== */
+function sceneCvEmail() {
+  const B = {
+    card: 0.3,    // L18  "His name was Rasel Ahlam."
+    type: 1.3,
+    click: 6.6,   //      "...a link to download his CV."
+    end: 9.5,
+  };
+  return {
+    id: 'cv-email',
+    title: 'L18 · The CV email',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'desk' }),
+      new UF.EmailCard({
+        from: 'Rasel Ahlam', to: 'Bangladesh Bank staff', subject: 'Job enquiry', date: 'January 2015',
+        body: 'Hello,\nI would like to apply for a position at your bank.\nMy CV and cover letter are at the link below.\nThank you for your time.',
+        link: 'Download my CV and cover letter',
+        note: 'Recreation based on FBI complaint, 2018',
+        h: 600, at: B.card, typeAt: B.type, clickAt: B.click,
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L21–L22 · From one PC to the SWIFT terminal, then a year of waiting  */
+/* ==================================================================== */
+function sceneNetworkSpread() {
+  const B = {
+    infect: 1.5,  // L21  "From that one infected computer..."
+    hop: 1.0,     //      seconds per machine; the red reaches SWIFT near the end of L21
+    end: 19,      // L22  "...They waited for about a year."
+  };
+  return {
+    id: 'network-spread',
+    title: 'L21–22 · Spreading to SWIFT',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'INSIDE BANGLADESH BANK · 2015', x: 96, y: 72, at: 0.2 }),
+      new UF.NetworkSpread({
+        at: 0.3, infectAt: B.infect, hop: B.hop, startLabel: 'ONE INFECTED PC',
+        target: { col: 8, row: 0, label: 'SWIFT TERMINAL', icon: 'server' },
+        wait: { label: 'WAITING', from: 0, to: 12, unit: 'MONTHS', dur: 3 },
+      }),
+      new UF.DramaLabel({ text: 'ILLUSTRATION', corner: 'br' }),
+      new UF.SourceTag({ text: 'US DOJ, 2018; BBC, 2021', at: 1.2 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L24 · Dhaka to Makati                                                */
+/* ==================================================================== */
+function sceneToManila() {
+  const B = {
+    dhaka: 0.6,   // L24  "In May 2015..."
+    line: 1.8,
+    pan: 1.8, panDur: 2.4,
+    pin: 4.0,     //      "...in Manila, the second part of the plan began."
+    end: 8,
+  };
+  return {
+    id: 'to-manila',
+    title: 'L24 · Dhaka to Makati',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Background({ style: 'void', dust: true }),
+      new UF.WorldMap({
+        reveal: { at: 0, dur: 1.2 },
+        camera: [
+          { t: 0, center: 'DHAKA', zoom: 2.2 },
+          { t: B.pan, center: [110, 18], zoom: 2.8, dur: B.panDur, ease: 'inOutCubic' },
+        ],
+        pins: [
+          { place: 'DHAKA', label: 'DHAKA', at: B.dhaka, side: 'left', icon: 'bank' },
+          { place: MAKATI, label: 'MAKATI CITY', sub: 'MANILA, PHILIPPINES', at: B.pin, side: 'right' },
+        ],
+        arcs: [{ from: 'DHAKA', to: MAKATI, at: B.line, dur: 2.2, lift: 0.15, color: 'amber', dashed: true, flow: false }],
+      }),
+      new UF.Heading({ kicker: 'MAY 2015 · THE ESCAPE ROUTE', x: 96, y: 72, at: 0.3 }),
+      new UF.SourceTag({ text: 'BBC, 2021', at: B.pin }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L27 · Four accounts, $500 each                                       */
+/* ==================================================================== */
+function sceneFourAccounts() {
+  const B = {
+    panel: 0.6,   // L27  "Each account was opened..."
+    rows: 1.0,
+    step: 1.2,    //      "...with a deposit of 500 dollars."
+    end: 11,      //      "...For nine months, the accounts just sat there."
+  };
+  return {
+    id: 'four-accounts',
+    title: 'L27 · Four accounts, $500 each',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'RCBC · JUPITER ST BRANCH · MAKATI', title: '15 May 2015', at: 0.2 }),
+      new UF.DataPanel({
+        x: 560, y: 340, w: 800, rowH: 92, at: B.panel, title: 'NEW CUSTOMERS',
+        rows: [
+          { at: B.rows,              label: 'US DOLLAR ACCOUNTS OPENED',  value: '4', size: 36 },
+          { at: B.rows + B.step,     label: 'DEPOSIT PER ACCOUNT',        value: 500, money: true, compact: false, color: 'red', size: 48 },
+          { at: B.rows + 2 * B.step, label: 'ACTIVITY FOR NINE MONTHS',   value: 'NONE', size: 36 },
+        ],
+      }),
+      new UF.SourceTag({ text: 'Philippine Daily Inquirer timeline', at: B.panel + 0.4 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L30 · A second destination: Colombo                                  */
+/* ==================================================================== */
+function sceneShalika() {
+  const B = {
+    pins: 0.4,
+    line: 1.2,
+    colombo: 2.2, // L30  "...a small organisation in Sri Lanka called the Shalika Foundation."
+    end: 7.5,
+  };
+  return {
+    id: 'shalika',
+    title: 'L30 · Colombo',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Background({ style: 'void', dust: true }),
+      new UF.WorldMap({
+        reveal: { at: 0, dur: 1.0 },
+        camera: [{ t: 0, center: [100, 15], zoom: 2.4 }],
+        pins: [
+          { place: 'DHAKA', label: 'DHAKA', at: B.pins, side: 'top', icon: 'bank' },
+          { place: MAKATI, label: 'MAKATI CITY', sub: 'JUPITER ST', at: B.pins + 0.2, side: 'right' },
+          { place: 'COLOMBO', label: 'COLOMBO, SRI LANKA', sub: 'SHALIKA FOUNDATION', at: B.colombo, side: 'left' },
+        ],
+        arcs: [{ from: 'DHAKA', to: 'COLOMBO', at: B.line, dur: 1.2, lift: 0.2, color: 'amber', dashed: true, flow: false }],
+      }),
+      new UF.Heading({ kicker: 'A SECOND DESTINATION', x: 96, y: 72, at: 0.3 }),
+      new UF.SourceTag({ text: 'Reuters, 2016', at: B.colombo }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L31 · The founder says she was set up                                */
+/* ==================================================================== */
+function sceneShalikaFounder() {
+  const B = {
+    card: 0.2,    // L31  "Its founder later said she had been told the money would be a legitimate donation..."
+    end: 9,       //      "...and that she was set up."
+  };
+  return {
+    id: 'shalika-founder',
+    title: 'L31 · The founder',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      cardDesk(),
+      new UF.FactCard({
+        kicker: 'SHALIKA FOUNDATION · SRI LANKA',
+        text: "The foundation's founder says she believed the money was a legitimate donation.",
+        highlight: 'a legitimate donation',
+        source: 'Reuters, March 2016',
+        at: B.card,
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L33–L38 · The five-day window                                        */
+/* ==================================================================== */
+function sceneFiveDayWindow() {
+  const B = {
+    spin: 4.4,          // L34  clocks spin to 20:36 / 09:36 / 22:36
+    notes: 7.2,         // L34  "the Fed is open… Bangladesh is going home"
+    dhakaWeekend: 11,   // L35
+    nyWeekend: 15,      // L36
+    holiday: 19,        // L37
+    merge: 24,          // L38  "≈ 5 DAYS"
+    end: 31,
+  };
+  return {
+    id: 'five-day-window',
+    title: 'L33–38 · The five-day window',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'THE WINDOW · FEBRUARY 2016', x: 96, y: 66, at: 0.2 }),
+      new UF.WorldClocks({
+        y: 300, radius: 112, gap: 540, at: 0.4, spinAt: B.spin, spinDur: 2.4,
+        clocks: [
+          { city: 'DHAKA',    zone: 'UTC+6', from: 'THU 09:56', time: 'THU 20:36', notes: [{ at: B.notes,       text: 'GOING HOME', color: 'red' }] },
+          { city: 'NEW YORK', zone: 'UTC−5', from: 'WED 22:56', time: 'THU 09:36', notes: [{ at: B.notes + 0.3, text: 'FED OPEN',   color: 'green' }] },
+          { city: 'MANILA',   zone: 'UTC+8', from: 'THU 11:56', time: 'THU 22:36', notes: [{ at: B.notes + 0.6, text: 'NIGHT',      color: 'graphite' }] },
+        ],
+        focus: [
+          { at: B.dhakaWeekend, dur: 3.6, index: 0 },
+          { at: B.nyWeekend,    dur: 3.6, index: 1 },
+          { at: B.holiday,      dur: 4.4, index: 2 },
+        ],
+      }),
+      new UF.CalendarStrip({
+        x: 150, y: 640, labelW: 240, cellW: 286, rowH: 84, at: 0.9, month: 'FEB 2016',
+        days: ['THU 4', 'FRI 5', 'SAT 6', 'SUN 7', 'MON 8'],
+        rows: ['DHAKA', 'NEW YORK', 'MANILA'],
+        columns: [{ col: 0, at: 2.4, out: B.dhakaWeekend - 0.5, color: 'red', label: 'THE NIGHT' }],
+        markers: [{ row: 0, pos: 0.86, at: B.notes + 0.6, out: B.merge - 0.3, label: '20:36' }],
+        marks: [
+          { row: 0, from: 1, to: 3, at: B.dhakaWeekend, label: 'WEEKEND',        color: 'blue' },
+          { row: 1, from: 2, to: 4, at: B.nyWeekend,    label: 'WEEKEND',        color: 'blue' },
+          { row: 2, from: 4, to: 5, at: B.holiday,      label: 'LUNAR NEW YEAR', color: 'red', size: 19 },
+        ],
+        merge: { at: B.merge, from: 0.86, to: 5, row: 1, label: '≈ 5 DAYS', sub: 'NOBODY WHO COULD STOP THE MONEY WAS AT A DESK' },
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L43–L44 · Two bytes                                                  */
+/* ==================================================================== */
+function sceneTwoBytes() {
+  const B = { zoom: 3.0, highlight: 5.6, push: 6.4, morph: 10.5, caption: 11.6, end: 18 };
+  return {
+    id: 'two-bytes',
+    title: 'L43–44 · Two bytes',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'THE PATCH · 2 BYTES', x: 96, y: 72, at: 0.2 }),
+      new UF.HexPatch({
+        title: 'SWIFT software', check: 'SECURITY CHECK',
+        from: ['75', '04'], to: ['90', '90'],
+        fromLabel: 'Conditional jump', toLabel: 'Do nothing',
+        fromAsm: 'JNZ  (if the check fails, stop)', toAsm: 'NOP  NOP  (no operation)',
+        at: 0.3, zoomAt: B.zoom, highlightAt: B.highlight, pushAt: B.push, morphAt: B.morph, captionAt: B.caption,
+      }),
+      new UF.SourceTag({ text: 'BAE Systems, "Two bytes to $951m", April 2016', at: B.caption + 2, x: UF.W - 96, align: 'right', y: 76 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L46 · The malware erases its own tracks                              */
+/* ==================================================================== */
+function sceneDeletedRecords() {
+  const B = {
+    rows: 1.0,    // L46  "According to the same analysis, the malware could delete records of the fraudulent transfers..."
+    step: 0.38,
+    erase: 6.4,   //      the five paid orders are wiped one by one; older rows slide back in to close each gap
+    eraseStep: 0.6,
+    end: 12,      //      "...and alter balance figures, so the account wouldn't look drained."
+  };
+  const e = i => B.erase + i * B.eraseStep;
+  return {
+    id: 'deleted-records',
+    title: 'L46 · Erasing the records',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'COVERING THE TRACKS', x: 96, y: 72, at: 0.2 }),
+      new UF.Ledger({
+        bank: 'BANGLADESH BANK · SWIFT RECORDS', holder: 'US DOLLAR ACCOUNT AT THE FEDERAL RESERVE BANK OF NEW YORK',
+        period: '3–4 FEB 2016', opening: 1e9, decimals: 0, closingLabel: 'BALANCE SHOWN',
+        label: 'ILLUSTRATION', note: 'Illustrative records · the five paid orders as reported by Reuters',
+        y: 560, at: 0.3, startAt: B.rows, rowStep: B.step,
+        rows: [
+          { date: '03 FEB', text: 'IMPORT PAYMENT · LNG', debit: 18.4e6 },
+          { date: '03 FEB', text: 'IMPORT PAYMENT · FERTILISER', debit: 7.9e6 },
+          { date: '03 FEB', text: 'IMPORT PAYMENT · CAPITAL MACHINERY', debit: 11.6e6 },
+          { date: '04 FEB', text: 'IMPORT PAYMENT · FUEL', debit: 14.2e6 },
+          { date: '04 FEB', text: 'IMPORT PAYMENT · EDIBLE OIL', debit: 6.8e6 },
+          { date: '04 FEB', text: 'PAYMENT ORDER → PAN ASIA BANK, COLOMBO', debit: 20e6, erase: e(0) },
+          { date: '04 FEB', text: 'IMPORT PAYMENT · FOOD GRAIN', debit: 9.6e6 },
+          { date: '04 FEB', text: 'PAYMENT ORDER → RCBC, MANILA', debit: 6e6, erase: e(1) },
+          { date: '04 FEB', text: 'PAYMENT ORDER → RCBC, MANILA', debit: 30e6, erase: e(2) },
+          { date: '04 FEB', text: 'IMPORT PAYMENT · PHARMACEUTICALS', debit: 4.1e6 },
+          { date: '04 FEB', text: 'PAYMENT ORDER → RCBC, MANILA', debit: 20e6, erase: e(3) },
+          { date: '04 FEB', text: 'PAYMENT ORDER → RCBC, MANILA', debit: 25e6, erase: e(4) },
+        ],
+      }),
+      new UF.SourceTag({ text: 'BAE Systems, "Two bytes to $951m", April 2016', at: 1.2 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L54 · Jupiter: a street and a sanctioned tanker                      */
+/* ==================================================================== */
+function sceneJupiterMatch() {
+  const B = {
+    left: 0.4,    // L54  "And by pure coincidence, 'Jupiter'..."
+    right: 2.0,   //      "...was also the name of an oil tanker and a shipping company..."
+    link: 4.6,    //      "...on the United States' sanctions list against Iran."
+    end: 10,
+  };
+  return {
+    id: 'jupiter-match',
+    title: 'L54 · Jupiter = Jupiter',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'THE SANCTIONS FILTER', x: 96, y: 72, at: 0.2 }),
+      new UF.Compare({
+        at: B.left,
+        left:  { label: 'PAYMENT ADDRESS', title: 'JUPITER ST', sign: true, sub: 'RCBC BRANCH · MAKATI', at: B.left },
+        right: { label: 'US SANCTIONS LIST', title: 'JUPITER', icon: 'ship', sub: 'OIL TANKER · IRAN SANCTIONS', at: B.right },
+        link: { label: 'MATCH', at: B.link },
+      }),
+      new UF.SourceTag({ text: 'Reuters Special Report, 2016', at: B.right }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L55 · "A total fluke"                                                */
+/* ==================================================================== */
+function sceneFluke() {
+  const B = {
+    card: 0.2,
+    type: 1.2,    // L55  "...A source quoted by Reuters called it a 'total fluke.'"
+    source: 4.0,
+    end: 11,
+  };
+  return {
+    id: 'total-fluke',
+    title: 'L55 · "A total fluke"',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      new UF.Background({ style: 'desk', glow: 'rgba(217,164,65,.06)' }),
+      new UF.QuoteCard({
+        quote: "It was a 'total fluke'…",
+        highlight: 'total fluke',
+        attribution: '— Source quoted by Reuters',
+        header: 'REUTERS SPECIAL REPORT', headerRight: '2016',
+        style: 'dark', w: 1240, h: 460, size: 76, lineH: 100,
+        at: B.card, typeAt: B.type, cps: 14,
+      }),
+      new UF.SourceTag({ text: 'Reuters Special Report, 2016', at: B.source, x: UF.W / 2, align: 'center', y: UF.H - 64 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L57 + L61 · The five payments that went through                      */
+/* ==================================================================== */
+function sceneFundsTrace() {
+  const B = {
+    dhaka: 0.8, ny: 1.3, toNY: 2.0,
+    colombo: 4.4, toColombo: 4.6,
+    manila: 6.6, toManila: 6.8,
+    push: 11.8,          // camera pushes into Asia
+    stop: 14.6,          // L61  Sri Lanka payment stopped
+    panel: 15.8,
+    end: 21,
+  };
+  const manila = [['$6M', 0.08, 0.40], ['$30M', 0.13, 0.50], ['$20M', 0.18, 0.60], ['$25M', 0.23, 0.70]];
+  return {
+    id: 'funds-trace',
+    title: 'L57 · The five payments',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Background({ style: 'void', dust: true }),
+      new UF.WorldMap({
+        span: 252,
+        reveal: { at: 0, dur: 1.4 },
+        camera: [
+          { t: 0, center: [16, 18], zoom: 1 },
+          { t: B.push, center: [100, 13], zoom: 2.0, dur: 2.4 },
+        ],
+        pins: [
+          { place: 'DHAKA',    label: 'DHAKA',           sub: 'BANGLADESH BANK',    at: B.dhaka,   side: 'tr', icon: 'bank' },
+          { place: 'NEW YORK', label: 'FEDERAL RESERVE', sub: 'NEW YORK',           at: B.ny,      side: 'top', icon: 'vault' },
+          { place: 'COLOMBO',  label: 'COLOMBO',         sub: 'SHALIKA FOUNDATION', at: B.colombo, side: 'bl' },
+          { place: 'MANILA',   label: 'MANILA',          sub: 'RCBC · JUPITER ST',  at: B.manila,  side: 'bottom' },
+        ],
+        arcs: [
+          { from: 'DHAKA', to: 'NEW YORK', at: B.toNY, dur: 1.6, lift: 0.3, label: '5 ORDERS PAID · $101M', labelAt: 0.5, dashed: true, flow: false, out: B.push },
+          { from: 'NEW YORK', to: 'COLOMBO', at: B.toColombo, dur: 1.6, lift: 0.36, label: '$20M', labelAt: 0.6,
+            stop: { at: B.stop, label: 'STOPPED', sub: 'misspelt "Fundation"', pos: 1, labelOffset: [150, 60] } },
+          ...manila.map(([label, lift, labelAt], i) => ({
+            from: 'NEW YORK', to: 'MANILA', at: B.toManila + i * 0.4, dur: 1.6, lift, label, labelAt, labelOut: B.push,
+          })),
+        ],
+      }),
+      new UF.Heading({ kicker: 'FUNDS TRACE · 4–5 FEB 2016', title: 'The five payments that went through', at: 0.3, out: B.push - 0.2, size: 60 }),
+      new UF.DataPanel({
+        x: 1400, y: 170, w: 430, at: B.panel, title: 'WHERE THE $101M WENT',
+        rows: [
+          { at: B.panel + 0.3, label: 'SRI LANKA', value: 20e6, money: true, strike: B.panel + 1.4 },
+          { at: B.panel + 0.6, label: 'PHILIPPINES', value: 81e6, money: true, color: 'red' },
+          { at: B.panel + 1.6, label: 'STILL MISSING', value: '$81M', color: 'red' },
+        ],
+      }),
+      new UF.SourceTag({ text: 'Reuters, 2016', at: 2.2 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L60–L61 · Deutsche Bank and Pan Asia Bank ask questions              */
+/* ==================================================================== */
+function sceneSriLankaQuestions() {
+  const B = {
+    nodes: 0.4,
+    send: 1.2,    // the $20M order leaves the Fed
+    db: 2.2,      // L60  "Deutsche Bank, which was passing the money along..."
+    dbQ: 3.8,     //      "...noticed the error."
+    pa: 5.0,      // L61  "And staff at Pan Asia Bank..."
+    paQ: 6.8,     //      "...a huge sum for a small organisation."
+    ask: 8.4,     //      "They asked Bangladesh Bank to confirm."
+    askDur: 1.4,
+    stop: 12.4,   //      "The payment was stopped, and the money came back."
+    end: 16,
+  };
+  const Y = 690, back = D.quadPoints(1200, Y - 62, 1200, 380, 448, 380, 60);
+  return {
+    id: 'sri-lanka-questions',
+    title: 'L60–61 · Two banks ask questions',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'THE SRI LANKA PAYMENT · $20M', title: 'Two banks asked questions', at: 0.2, size: 56 }),
+      new UF.FlowChart({
+        nodes: [
+          { id: 'dhaka', x: 270,  y: 380, w: 340, title: 'BANGLADESH BANK', sub: 'Dhaka', icon: 'bank', at: B.nodes },
+          { id: 'fed',   x: 270,  y: Y,   w: 340, title: 'NEW YORK FED', sub: 'Released', value: 20e6, icon: 'vault', at: B.nodes + 0.3 },
+          { id: 'db',    x: 735,  y: Y,   w: 340, title: 'DEUTSCHE BANK', sub: 'Passing it along', icon: 'bank', at: B.db,
+            tag: { text: '? SPELLING', color: 'amber', at: B.dbQ } },
+          { id: 'pa',    x: 1200, y: Y,   w: 340, title: 'PAN ASIA BANK', sub: 'Colombo, Sri Lanka', icon: 'bank', at: B.pa,
+            tag: { text: '? SIZE', color: 'amber', at: B.paQ } },
+          { id: 'sh',    x: 1665, y: Y,   w: 340, title: 'SHALIKA', sub: 'Typed as "Fundation"', icon: 'building', at: B.pa + 0.6,
+            tag: { text: 'STOPPED', color: 'red', at: B.stop } },
+        ],
+        edges: [
+          { from: 'fed', to: 'db', at: B.send, dur: 1.0, weight: 6 },
+          { from: 'db',  to: 'pa', at: B.pa - 0.6, dur: 1.0, weight: 6 },
+        ],
+      }),
+      UF.layer((ctx, t, fx) => {
+        const p = UF.ease.inOutCubic(UF.seg(t, B.ask, B.askDur));
+        if (p <= 0) return;
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = UF.c('amber', 0.22);
+        ctx.lineWidth = 12;
+        D.partialPath(ctx, back, p);
+        ctx.stroke();
+        ctx.strokeStyle = UF.c('amber');
+        ctx.lineWidth = 4;
+        const head = D.partialPath(ctx, back, p);
+        ctx.stroke();
+        if (head) D.arrowHead(ctx, head.x, head.y, head.a, 22, UF.c('amber'));
+        if (p > 0.45) {
+          ctx.globalAlpha = UF.seg(t, B.ask + B.askDur * 0.45, 0.3);
+          const [lx, ly] = D.pointAt(back, 0.62);
+          D.pill(ctx, 'TOO BIG FOR THIS ACCOUNT?', lx, ly - 34, { align: 'center', fill: UF.c('black', 0.85), stroke: UF.c('amber'), font: UF.font.mono(20, 'bold'), h: 40 });
+        }
+        ctx.restore();
+        fx.kick(t, B.ask + B.askDur, { rgb: 0.4, decay: 10 });
+      }),
+      new UF.SourceTag({ text: 'Reuters, 2016', at: B.db }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L70 · Friday to Saturday 12:30                                       */
+/* ==================================================================== */
+function sceneMessagesPrinted() {
+  const B = {
+    line: 0.3,
+    tray: 0.8,      // recap: Friday 10:30
+    leave: 1.5,     // recap: Friday 11:15
+    frozen: 2.2,    // recap: Saturday, software frozen
+    print: 3.4,     // L70  "By 12:30 they get the terminal running and print the messages by hand."
+    pages: 4.0,
+    end: 14,
+  };
+  const px = 200 + 0.86 * 1520, py = 400;
+  return {
+    id: 'messages-printed',
+    title: 'L70 · Saturday 12:30',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'DHAKA · 5–6 FEBRUARY 2016', x: 96, y: 72, at: 0.2 }),
+      new UF.Timeline({
+        x0: 200, x1: 1720, y: 600, at: B.line,
+        events: [
+          { at: B.tray,   pos: 0.04, date: 'FRI 5 FEB', time: '10:30', text: 'Printer tray found empty', kick: false },
+          { at: B.leave,  pos: 0.24, date: 'FRI 5 FEB', time: '11:15', text: 'Duty officer leaves', kick: false },
+          { at: B.frozen, pos: 0.58, date: 'SAT 6 FEB', text: 'SWIFT software not responding', kick: false },
+          { at: B.print,  pos: 0.86, date: 'SAT 6 FEB', time: '12:30', text: 'Messages printed by hand', color: 'red' },
+        ],
+      }),
+      UF.layer((ctx, t) => {
+        const a = UF.ease.outCubic(UF.seg(t, B.print, 0.5));
+        if (a <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = a;
+        const n = 9;
+        for (let i = 0; i < n; i++) {
+          const k = UF.ease.outCubic(UF.seg(t, B.pages + i * 0.32, 0.45));
+          if (k <= 0) break;
+          const y = UF.lerp(py - 40, py - 150 - i * 7, k);
+          ctx.fillStyle = UF.c('paper', 0.92);
+          ctx.fillRect(px - 42, y - 54, 84, 108);
+          ctx.fillStyle = UF.c('graphite', 0.7);
+          for (let l = 0; l < 5; l++) ctx.fillRect(px - 30, y - 38 + l * 16, l === 4 ? 36 : 60, 4);
+        }
+        D.icon(ctx, 'printer', px, py, 130);
+        ctx.restore();
+      }),
+      new UF.SourceTag({ text: 'Bloomberg / AFP, March 2016', at: 0.8 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L71 · Email, fax, phone — no reply                                   */
+/* ==================================================================== */
+function sceneNoReply() {
+  const B = {
+    first: 2.0,     // L71  "They email the Fed..."
+    step: 1.6,      //      "They send a fax. They call."
+    noReply: 0.8,   //      red cross lands this long after its icon
+    ny: 8.8,        //      "But now it's the weekend in New York."
+    end: 13,
+  };
+  const items = [['email', 'EMAIL'], ['fax', 'FAX'], ['phone', 'PHONE']];
+  return {
+    id: 'no-reply',
+    title: 'L71 · Email, fax, phone — no reply',
+    duration: B.end,
+    transition: { in: 'fade', out: 'wipe' },
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'SATURDAY · 6 FEB 2016', title: 'Nobody answered', at: 0.2 }),
+      new UF.TimeChip({
+        x: UF.W - 96, y: 96, align: 'right',
+        items: [
+          { at: 0.4,  time: '13:30', date: 'SATURDAY 6 FEB', place: 'DHAKA' },
+          { at: B.ny, time: '02:30', date: 'SATURDAY 6 FEB', place: 'NEW YORK · WEEKEND' },
+        ],
+      }),
+      UF.layer((ctx, t, fx) => {
+        items.forEach(([icon, label], i) => {
+          const at = B.first + i * B.step;
+          const a = UF.ease.outCubic(UF.seg(t, at, 0.5));
+          if (a <= 0) return;
+          const x = UF.W / 2 + (i - 1) * 380, y = 600 + (1 - a) * 30;
+          ctx.globalAlpha = a;
+          D.panel(ctx, x - 140, y - 150, 280, 300, { tick: 16 });
+          D.icon(ctx, icon, x, y - 30, 120);
+          D.text(ctx, label, x, y + 100, { font: UF.font.mono(22, 'bold'), color: UF.c('dim'), spacing: 6, align: 'center' });
+
+          const crossAt = at + B.noReply;
+          const k = UF.seg(t, crossAt, 0.25);
+          if (k > 0) {
+            fx.kick(t, crossAt, { shake: 0.006, rgb: 0.5, decay: 10 });
+            D.icon(ctx, 'cross', x, y - 30, 170 * UF.lerp(1.5, 1, UF.ease.outBack(k)), { color: UF.c('red'), width: 9 });
+          }
+        });
+        ctx.globalAlpha = 1;
+      }),
+      new UF.SourceTag({ text: 'Bloomberg / AFP, March 2016', at: 0.6 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L73–L75 · Sunday, Monday, Tuesday: the stop orders                   */
+/* ==================================================================== */
+function sceneStopOrders() {
+  const B = {
+    sun: 0.3,         // L73  "Sunday. Bangladesh's working week begins again."
+    dhakaOpen: 1.4,
+    nyWeekend: 3.4,   //      "But in New York, it's still the weekend."
+    mon: 9,           // L74  "Monday. SWIFT is back up."
+    send: 11,         //      "...urgent stop-payment orders to the Fed, to RCBC..."
+    holiday: 14,
+    closed: 18.6,     // L75  "But in the Philippines it's the Lunar New Year."
+    tue: 22,          //      "...received ... on Tuesday the 9th."
+    end: 28,
+  };
+  return {
+    id: 'stop-orders',
+    title: 'L73–75 · The stop orders',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'THE STOP ORDERS · 7–9 FEB 2016', x: 96, y: 66, at: 0.2 }),
+      new UF.CalendarStrip({
+        x: 150, y: 210, labelW: 240, cellW: 380, rowH: 78, at: 0.5, month: 'FEB 2016',
+        days: ['SUN 7', 'MON 8', 'TUE 9'],
+        rows: ['DHAKA', 'NEW YORK', 'MANILA'],
+        columns: [
+          { col: 0, at: B.sun + 0.4, out: B.mon - 0.3, color: 'blue',  label: 'SUNDAY' },
+          { col: 1, at: B.mon,       out: B.tue - 0.3, color: 'red',   label: 'MONDAY' },
+          { col: 2, at: B.tue,                         color: 'amber', label: 'TUESDAY' },
+        ],
+        marks: [
+          { row: 0, from: 0, to: 1, at: B.dhakaOpen, label: 'OFFICE OPEN',           color: 'green' },
+          { row: 1, from: 0, to: 1, at: B.nyWeekend, label: 'WEEKEND',               color: 'blue' },
+          { row: 0, from: 1, to: 2, at: B.send,      label: 'STOP ORDERS SENT',      color: 'red', size: 18 },
+          { row: 1, from: 1, to: 2, at: B.send + 0.6, label: 'FED OPEN',             color: 'green' },
+          { row: 2, from: 1, to: 2, at: B.holiday,   label: 'LUNAR NEW YEAR',        color: 'red', size: 19 },
+          { row: 2, from: 2, to: 3, at: B.tue + 0.4, label: 'STOP REQUEST RECEIVED', color: 'amber', size: 17 },
+        ],
+      }),
+      new UF.FlowChart({
+        nodes: [
+          { id: 'bb',   x: 420,  y: 810, w: 420, h: 120, title: 'BANGLADESH BANK', sub: 'Urgent stop-payment orders', icon: 'bank', at: B.send - 0.6 },
+          { id: 'rcbc', x: 1380, y: 810, w: 460, h: 120, title: 'RCBC · JUPITER ST', sub: 'Makati, Manila', icon: 'building', at: B.send - 0.3,
+            tag: { text: 'CLOSED — HOLIDAY', color: 'red', at: B.closed } },
+        ],
+        edges: [{ from: 'bb', to: 'rcbc', at: B.send, dur: 1.6, weight: 5, label: 'STOP-PAYMENT ORDER' }],
+      }),
+      UF.layer((ctx, t, fx) => {
+        const k = UF.ease.outBack(UF.seg(t, B.tue + 0.6, 0.4));
+        if (k <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, k);
+        D.pill(ctx, 'RECEIVED · TUE 9 FEB', 1380, 920, { align: 'center', fill: UF.c('amber'), color: UF.c('black'), font: UF.font.mono(18, 'bold'), h: 36, spacing: 3 });
+        ctx.restore();
+        fx.kick(t, B.tue + 0.6, { rgb: 0.4, decay: 10 });
+      }),
+      new UF.SourceTag({ text: 'Philippine Daily Inquirer timeline; Bloomberg / AFP, March 2016', at: 1.0 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L76 · $58.15 million already withdrawn                               */
+/* ==================================================================== */
+function sceneWithdrawn() {
+  const B = {
+    card: 0.2,    // L76  "By then, withdrawals of 58 million dollars had already been processed..."
+    end: 8.5,     //      "...at the Jupiter Street branch."
+  };
+  return {
+    id: 'withdrawn',
+    title: 'L76 · Already withdrawn',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      cardDesk(),
+      new UF.FactCard({
+        kicker: 'RCBC · JUPITER ST BRANCH', date: '9 FEBRUARY 2016',
+        text: 'The stop request reaches RCBC. $58.15 million already withdrawn.',
+        highlight: '$58.15 million',
+        source: 'Philippine Daily Inquirer timeline',
+        at: B.card,
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L81–L82 · Washing the money                                          */
+/* ==================================================================== */
+function sceneMoneyFlow() {
+  const B = { accounts: 0.8, merge: 2.2, philrem: 4.0, swap: 5.6, split: 7.4, cash: 9.6, end: 17 };
+  const accY = [380, 510, 640, 770];
+  const amounts = [6e6, 30e6, 20e6, 25e6];
+  const dest = [
+    { id: 'solaire', title: 'SOLAIRE CASINO',         sub: 'Bloomberry resort',   value: 29e6, icon: 'casino',   y: 390 },
+    { id: 'hawaii',  title: 'EASTERN HAWAII LEISURE', sub: 'Company account',     value: 21e6, icon: 'building', y: 575 },
+    { id: 'xu',      title: 'WEIKANG XU',             sub: 'Junket operator',     value: 30e6, icon: 'cash',     y: 760,
+      tag: { text: 'CASH', color: 'amber', at: B.cash } },
+  ];
+  return {
+    id: 'money-flow',
+    title: 'L81–82 · Washing the money',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'FOLLOW THE MONEY · MANILA 2016', title: 'How $81 million disappeared', at: 0.3, size: 60 }),
+      new UF.FlowChart({
+        nodes: [
+          ...accY.map((y, i) => ({
+            id: `acc${i}`, x: 250, y, w: 300, h: 100, title: `ACCOUNT ${i + 1}`, sub: 'USD account',
+            value: amounts[i], icon: 'user', at: B.accounts + i * 0.15, valueSize: 36,
+          })),
+          { id: 'pool', x: 690, y: 575, w: 280, h: 150, title: 'ONE ACCOUNT', sub: 'Funds pooled', value: 81e6, icon: 'vault', at: B.merge + 0.6, accent: 'red' },
+          { id: 'philrem', x: 1110, y: 575, w: 300, h: 150, title: 'PHILREM', sub: 'Remittance company', icon: 'exchange', at: B.philrem + 0.6,
+            swap: { from: 'USD', to: 'PHP', at: B.swap } },
+          ...dest.map((d, i) => ({
+            id: d.id, x: 1590, y: d.y, w: 420, h: 120, title: d.title, sub: d.sub, value: d.value, prefix: '≈ ', icon: d.icon,
+            at: B.split + i * 0.5 + 0.8, tag: d.tag, valueSize: 40,
+          })),
+        ],
+        edges: [
+          ...accY.map((_, i) => ({ from: `acc${i}`, to: 'pool', at: B.merge + i * 0.12, dur: 1.0, weight: 2 + amounts[i] / 5e6 })),
+          { from: 'pool', to: 'philrem', at: B.philrem, dur: 0.9, weight: 14 },
+          ...dest.map((d, i) => ({ from: 'philrem', to: d.id, at: B.split + i * 0.5, dur: 1.0, weight: 2 + d.value / 5e6 })),
+        ],
+      }),
+      new UF.SourceTag({ text: 'Philippine Senate testimony, as reported by ABS-CBN, March 2016', at: B.split + 1.5 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L86 · Weikang Xu: a private jet, never found                         */
+/* ==================================================================== */
+function walker(ctx, x, y, phase, s, color) {
+  const sw = Math.sin(phase) * 0.5;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 13;
+  ctx.beginPath();
+  for (const k of [sw, -sw]) { ctx.moveTo(0, -56); ctx.lineTo(Math.sin(k) * 56, -56 + Math.cos(k) * 56); }
+  ctx.stroke();
+  D.roundRect(ctx, -15, -114, 30, 64, 12);
+  ctx.fill();
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  for (const k of [-sw, sw]) { ctx.moveTo(0, -104); ctx.lineTo(Math.sin(k) * 46, -104 + Math.cos(k) * 46); }
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, -130, 15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** Side-view business jet facing right, (x, y) where the wheels meet the ground. */
+function jetSide(ctx, x, y, s, { pitch = 0, gear = 1, door = 0 } = {}) {
+  const body = UF.c('paper', 0.94), shade = '#aaa59a', glass = '#14171c';
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(pitch);
+  ctx.scale(s, s);
+  ctx.translate(0, -42);
+  ctx.fillStyle = shade;
+  ctx.beginPath();
+  ctx.moveTo(-168, -18); ctx.lineTo(-226, -110); ctx.lineTo(-196, -110); ctx.lineTo(-118, -20);
+  ctx.closePath();
+  ctx.fill();
+  D.roundRect(ctx, -258, -118, 86, 9, 4);
+  ctx.fill();
+  ctx.fillRect(-112, -26, 24, 8);
+  D.roundRect(ctx, -158, -50, 96, 28, 14);
+  ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(-232, -8);
+  ctx.quadraticCurveTo(-200, -20, -150, -22);
+  ctx.lineTo(140, -24);
+  ctx.quadraticCurveTo(206, -22, 234, 4);
+  ctx.quadraticCurveTo(228, 16, 196, 16);
+  ctx.lineTo(-150, 16);
+  ctx.quadraticCurveTo(-200, 12, -232, -8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = UF.c('red');
+  ctx.fillRect(-200, 4, 396, 3);
+  ctx.fillStyle = glass;
+  for (let wx = -70; wx <= 100; wx += 30) { ctx.beginPath(); ctx.ellipse(wx, -6, 6, 8, 0, 0, Math.PI * 2); ctx.fill(); }
+  ctx.beginPath();
+  ctx.moveTo(176, -18); ctx.lineTo(206, -14); ctx.lineTo(212, -4); ctx.lineTo(172, -6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = glass;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(124, -20, 26, 34);
+  if (door > 0) {
+    ctx.save();
+    ctx.globalAlpha *= door;
+    ctx.fillRect(124, -20, 26, 34);
+    ctx.restore();
+  }
+  ctx.fillStyle = shade;
+  ctx.beginPath();
+  ctx.moveTo(-50, 10); ctx.lineTo(70, 10); ctx.lineTo(10, 24); ctx.lineTo(-70, 24);
+  ctx.closePath();
+  ctx.fill();
+  if (gear > 0) {
+    ctx.strokeStyle = shade;
+    ctx.lineWidth = 4;
+    ctx.fillStyle = '#3a3f47';
+    for (const gx of [-20, 176]) {
+      ctx.beginPath(); ctx.moveTo(gx, 16); ctx.lineTo(gx, 16 + 18 * gear); ctx.stroke();
+      ctx.beginPath(); ctx.arc(gx, 16 + 18 * gear, 8 * gear, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function scenePrivateJet() {
+  const B = {
+    node: 0.4,    // L86  "As for Weikang Xu,"
+    arrow: 1.2,   //      the money arrow runs on out of his node
+    walk: 2.2,    //      "...according to the Philippine Senate inquiry, he's believed to have left on a private jet."
+    board: 4.5,   //      up the airstair
+    roll: 5.8,    //      the jet rolls and lifts off the right edge
+    gone: 7.6,    //      "He has never been found."
+    end: 11,
+  };
+  const G = 820, JX = 1320, JS = 1.9, PS = 0.52, START = 760;
+  const doorX = JX + 137 * JS, doorY = G - 28 * JS, footX = doorX - 118;
+  const arrow = D.cubicPoints(540, 330, 760, 330, 760, 560, START, 700, 60);
+  const jetAt = p => ({
+    x: JX + 1300 * UF.ease.inCubic(p),
+    y: G - 360 * UF.ease.inQuad(UF.clamp((p - 0.5) / 0.5)),
+    pitch: -0.14 * UF.ease.inOutSine(UF.clamp((p - 0.42) / 0.25)),
+  });
+  return {
+    id: 'private-jet',
+    title: 'L86 · A private jet',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'THE JUNKET OPERATOR', x: 96, y: 72, at: 0.2 }),
+      new UF.FlowChart({
+        nodes: [{ id: 'xu', x: 330, y: 330, w: 420, h: 120, title: 'WEIKANG XU', sub: 'Junket operator', value: 30e6, prefix: '≈ ', icon: 'cash', at: B.node, valueSize: 40 }],
+        edges: [],
+      }),
+      new UF.StatusBadge({ status: 'alleged', note: 'Named in Senate testimony', x: 120, y: 446, at: B.node + 0.8 }),
+      UF.layer((ctx, t, fx) => {
+        const E = UF.ease, seg = UF.seg;
+        ctx.save();
+        ctx.fillStyle = UF.c('line');
+        ctx.fillRect(600, G, UF.W - 600, 2);
+        for (let x = 660; x < UF.W; x += 120) ctx.fillRect(x, G + 40, 60, 4);
+
+        const pa = E.inOutCubic(seg(t, B.arrow, 1.0));
+        if (pa > 0) {
+          ctx.globalAlpha = 1 - seg(t, B.roll, 0.6);
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = UF.c('red', 0.22);
+          ctx.lineWidth = 12;
+          D.partialPath(ctx, arrow, pa);
+          ctx.stroke();
+          ctx.strokeStyle = UF.c('red');
+          ctx.lineWidth = 4;
+          const head = D.partialPath(ctx, arrow, pa);
+          ctx.stroke();
+          if (head) D.arrowHead(ctx, head.x, head.y, head.a, 22, UF.c('red'));
+          ctx.globalAlpha = 1;
+        }
+
+        const pw = E.inOutSine(seg(t, B.walk, B.board - B.walk)), pc = E.inOutSine(seg(t, B.board, 0.6));
+        let px = UF.lerp(START, footX, pw), py = G;
+        if (pc > 0) { px = UF.lerp(footX, doorX - 4, pc); py = UF.lerp(G, doorY, pc); }
+        const shown = seg(t, B.arrow + 0.8, 0.3) * (1 - seg(t, B.board + 0.6, 0.3));
+        if (pw > 0) {
+          ctx.globalAlpha = 1 - seg(t, B.roll, 0.6);
+          ctx.strokeStyle = UF.c('red', 0.5);
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 12]);
+          ctx.beginPath();
+          ctx.moveTo(START, G + 14);
+          ctx.lineTo(Math.min(px, footX), G + 14);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.globalAlpha = 1;
+        }
+
+        const pr = seg(t, B.roll, B.gone - B.roll), j = jetAt(pr);
+        const retract = E.inOutCubic(seg(t, B.board + 1.0, 0.4));
+        if (retract < 1) {
+          const fx0 = UF.lerp(footX, doorX, retract), fy0 = UF.lerp(G, doorY, retract);
+          const dx = doorX - fx0, dy = doorY - fy0;
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = '#b8b3a7';
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          for (let k = 1; k <= 5; k++) {
+            const sx = fx0 + dx * k / 6, sy = fy0 + dy * k / 6;
+            ctx.moveTo(sx - 9, sy - 3);
+            ctx.lineTo(sx + 9, sy - 3);
+          }
+          ctx.stroke();
+          ctx.strokeStyle = '#8a857b';
+          ctx.lineWidth = 9;
+          ctx.beginPath();
+          ctx.moveTo(fx0, fy0);
+          ctx.lineTo(doorX, doorY);
+          ctx.stroke();
+          ctx.strokeStyle = '#a19c91';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(fx0 + 4, fy0 - 44);
+          ctx.lineTo(doorX - 4, doorY - 44);
+          for (const k of [0.1, 0.5, 0.9]) {
+            ctx.moveTo(fx0 + dx * k, fy0 + dy * k - 4);
+            ctx.lineTo(fx0 + dx * k, fy0 + dy * k - 44);
+          }
+          ctx.stroke();
+        }
+
+        if (pr > 0.5) {
+          ctx.globalAlpha = 1 - seg(t, B.gone, 1.2);
+          ctx.strokeStyle = UF.c('paper', 0.35);
+          ctx.lineWidth = 3;
+          ctx.setLineDash([14, 12]);
+          ctx.beginPath();
+          for (let q = 0.5; q <= pr; q += 0.01) {
+            const k = jetAt(q);
+            q === 0.5 ? ctx.moveTo(k.x - 200 * JS, k.y - 40 * JS) : ctx.lineTo(k.x - 200 * JS, k.y - 40 * JS);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.globalAlpha = 1;
+        }
+        jetSide(ctx, j.x, j.y, JS, { pitch: j.pitch, gear: 1 - UF.clamp((pr - 0.62) / 0.15), door: 1 - seg(t, B.board + 1.0, 0.3) });
+        fx.kick(t, B.roll, { shake: 0.004, decay: 6 });
+
+        if (shown > 0) {
+          ctx.globalAlpha = shown;
+          walker(ctx, px, py, (px - START) / 26 + pc * 6, PS, UF.c('red'));
+          ctx.globalAlpha = 1;
+        }
+
+        const pl = seg(t, B.walk + 0.6, 0.4) * (1 - seg(t, B.roll + 0.4, 0.4));
+        if (pl > 0) {
+          ctx.globalAlpha = pl;
+          D.pill(ctx, 'BELIEVED TO HAVE LEFT ON A PRIVATE JET', JX, 440, { align: 'center', fill: UF.c('black', 0.85), stroke: UF.c('amber'), font: UF.font.mono(20, 'bold'), h: 44, spacing: 3 });
+          ctx.globalAlpha = 1;
+        }
+
+        const pq = seg(t, B.gone, 0.5);
+        if (pq > 0) {
+          const s = UF.lerp(1.6, 1, E.outBack(pq));
+          ctx.globalAlpha = UF.clamp(pq * 2);
+          ctx.save();
+          ctx.translate(JX, 680);
+          ctx.scale(s, s);
+          ctx.font = UF.font.display(300);
+          D.text(ctx, '?', 0, 100, { color: UF.c('amber'), align: 'center' });
+          ctx.restore();
+          ctx.globalAlpha = seg(t, B.gone + 0.6, 0.4);
+          D.pill(ctx, 'NEVER FOUND', JX, 900, { align: 'center', fill: UF.c('red'), font: UF.font.mono(24, 'bold'), h: 50, spacing: 6 });
+          fx.kick(t, B.gone, { flash: 0.15, rgb: 0.5, decay: 9 });
+        }
+        ctx.restore();
+      }),
+      new UF.DramaLabel({ text: 'ILLUSTRATION', corner: 'br' }),
+      new UF.SourceTag({ text: 'BBC, 2021 · Philippine Senate inquiry', at: B.walk }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L87 · Kim Wong                                                       */
+/* ==================================================================== */
+function sceneKimWong() {
+  const B = {
+    card: 0.2,    // L87  "Another junket operator, Kim Wong, was named in testimony..."
+    end: 10,      //      "...Charges against him were later dropped."
+  };
+  return {
+    id: 'kim-wong',
+    title: 'L87 · Kim Wong',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      cardDesk(),
+      new UF.FactCard({
+        kicker: 'ANOTHER JUNKET OPERATOR',
+        text: 'Kim Wong returned $4.63 million and denied the claims.',
+        highlight: '$4.63 million',
+        person: 'Kim Wong', status: { text: 'CHARGES DROPPED', color: 'green' }, statusNote: 'Named in Senate testimony',
+        source: 'Rappler, Senate hearing coverage',
+        at: B.card,
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L88 · Manila to Macau, and a line towards North Korea                */
+/* ==================================================================== */
+function sceneMacau() {
+  const B = {
+    manila: 0.6,
+    arc: 1.6,     // L88  "Investigators traced links from the casino side to Macau..."
+    macau: 2.8,
+    nk: 6.0,      //      "...ties to North Korean financial networks."
+    end: 12,
+  };
+  return {
+    id: 'macau',
+    title: 'L88 · Manila to Macau',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Background({ style: 'void', dust: true }),
+      new UF.WorldMap({
+        reveal: { at: 0, dur: 1.0 },
+        camera: [
+          { t: 0, center: [119, 21], zoom: 3.4 },
+          { t: B.nk - 0.4, center: [121, 27], zoom: 3.0, dur: 2.0, ease: 'inOutCubic' },
+        ],
+        pins: [
+          { place: 'MANILA',    label: 'MANILA', sub: 'CASINOS', at: B.manila, side: 'bottom', icon: 'casino' },
+          { place: 'MACAU',     label: 'MACAU', at: B.macau, side: 'left' },
+          { place: 'PYONGYANG', label: 'NORTH KOREA', at: B.nk + 1.6, side: 'right', color: 'dim' },
+        ],
+        arcs: [
+          { from: 'MANILA', to: 'MACAU', at: B.arc, dur: 1.4, lift: 0.25, label: 'INVESTIGATORS BELIEVE…', labelAt: 0.5, labelOffset: [190, 10], color: 'amber' },
+          { from: 'MACAU', to: 'PYONGYANG', at: B.nk, dur: 2.2, lift: 0.2, dashed: true, flow: false, endRing: false, color: 'dim' },
+        ],
+      }),
+      new UF.Heading({ kicker: 'WHERE THE MONEY WENT NEXT', x: 96, y: 72, at: 0.3 }),
+      new UF.SourceTag({ text: 'BBC, 2021', at: B.arc }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L90–L91 · The story breaks; the governor resigns                     */
+/* ==================================================================== */
+function sceneStoryBreaks() {
+  const B = {
+    line: 0.3,
+    heist: 0.8,     // L90  "At first, Bangladesh Bank kept the theft quiet."
+    inquirer: 9.5,  //      "The story finally broke in the Philippine press..."
+    resign: 14.5,   // L91  "On the 15th of March... Atiur Rahman, resigned."
+    end: 20,
+  };
+  return {
+    id: 'story-breaks',
+    title: 'L90–91 · The story breaks',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'AFTER THE HEIST · 2016', title: 'Kept quiet for weeks', at: 0.2 }),
+      new UF.Timeline({
+        x0: 220, x1: 1700, y: 620, at: B.line,
+        events: [
+          { at: B.heist,    pos: 0.04,  date: '4 FEB 2016',  text: 'The heist', kick: false },
+          { at: B.inquirer, pos: 0.615, date: '29 FEB 2016', text: 'The story breaks in the Philippine Daily Inquirer' },
+          { at: B.resign,   pos: 0.96,  date: '15 MAR 2016', text: 'Governor Atiur Rahman resigns', color: 'red' },
+        ],
+      }),
+      new UF.SourceTag({ text: 'Philippine Daily Inquirer, Feb 2016; Wikipedia summary of reporting', at: 1.0 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L93–L94 · The code matches an older attack: Lazarus                  */
+/* ==================================================================== */
+function sceneLazarusCode() {
+  const B = {
+    left: 0.4,     // L93  "And researchers at companies like Symantec and BAE Systems noticed something else."
+    right: 1.4,
+    link: 4.4,     //      "Parts of the code resembled tools used in an earlier, famous attack..."
+    overlay: 10.5, // L94  "The group behind that attack was known as Lazarus."
+    end: 14,
+  };
+  return {
+    id: 'lazarus-code',
+    title: 'L93–94 · Matching code',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'THE MALWARE · 2016', x: 96, y: 72, at: 0.2, out: B.overlay }),
+      new UF.Compare({
+        at: B.left, label: 'ILLUSTRATION',
+        left: {
+          label: 'BANGLADESH BANK · 2016', at: B.left, match: [3, 7],
+          code: [
+            'void wipe_file(char *path)',
+            '{',
+            '  HANDLE h = open_file(path);',
+            '  DWORD size = get_size(h);',
+            '  for (int pass = 0; pass < 3; pass++) {',
+            '    fill_random(buf, size);',
+            '    write_block(h, buf, size);',
+            '  }',
+            '  rename_random(path);',
+            '  delete_file(path);',
+            '}',
+          ],
+        },
+        right: {
+          label: 'SONY PICTURES ATTACK · 2014', at: B.right, match: [4, 8],
+          code: [
+            'int erase_target(LPCSTR name)',
+            '{',
+            '  log_event(0x17);',
+            '  HANDLE h = open_file(name);',
+            '  DWORD size = get_size(h);',
+            '  for (int pass = 0; pass < 3; pass++) {',
+            '    fill_random(buf, size);',
+            '    write_block(h, buf, size);',
+            '  }',
+            '  close_handle(h);',
+            '  return delete_file(name);',
+            '}',
+          ],
+        },
+        link: { label: 'MATCHING CODE', at: B.link },
+        overlay: { text: 'LAZARUS', sub: 'THE GROUP BEHIND THE SONY ATTACK', at: B.overlay },
+      }),
+      new UF.SourceTag({ text: 'US DOJ, 2018 · code shown is illustrative', at: 1.0 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L97 · Charges disclaimer                                             */
+/* ==================================================================== */
+function sceneDisclaimerCharges() {
+  return {
+    id: 'disclaimer-charges',
+    title: 'L97 · Charges disclaimer',
+    duration: 7,
+    layers: [
+      new UF.Background({ style: 'void' }),
+      new UF.Disclaimer({
+        title: 'PLEASE NOTE', at: 0.3,
+        text: 'These are charges. A defendant is presumed innocent unless proven guilty. North Korea denies the allegations.',
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L98 · The Korean peninsula at night                                  */
+/* ==================================================================== */
+function sceneKoreaAtNight() {
+  const B = {
+    land: 0.2,
+    lights: 0.8,  // L98  "This is the Korean peninsula at night, seen from space."
+    south: 3.6,   //      "South Korea blazes with light."
+    north: 5.6,   //      "North Korea is almost completely dark."
+    end: 11,
+  };
+  const L = (place, weight, spread, count) => ({ place, weight, spread, count });
+  const SOUTH_KOREA = [126.2,37.78, 126.65,37.95, 127.2,38.3, 128.3,38.6, 128.9,37.8, 129.5,36, 129.1,35.1, 126.3,34.4, 126.5,35.6, 126.7,37.4];
+  const NORTH_KOREA = [
+    124.3,39.95, 125.0,40.45, 125.8,40.9, 126.6,41.6, 127.2,41.5, 128.1,41.45, 128.1,42.0, 129.0,42.2, 129.7,42.45, 130.25,42.7,
+    130.7,42.3, 129.8,41.8, 129.3,40.8, 128.6,40.3, 127.6,39.8, 127.4,39.2, 128.0,38.9, 128.3,38.6,
+    128.05,38.3, 127.6,38.32, 127.2,38.3, 126.95,38.1, 126.65,37.95, 126.2,37.78,
+    125.6,37.8, 124.8,37.9, 125.3,38.5, 125.1,39.0, 125.4,39.4, 124.8,39.6,
+  ];
+  return {
+    id: 'korea-at-night',
+    title: 'L98 · Korea at night',
+    duration: B.end,
+    pushIn: 0.03,
+    layers: [
+      new UF.Background({ style: 'void', dust: false }),
+      new UF.NightMap({
+        center: [127.5, 38.3], span: 11, landAt: B.land, lightsAt: B.lights, lightsDur: 2.6,
+        lights: [
+          L('SEOUL', 1.6, 0.22, 170), L([126.65, 37.45], 1, 0.12), L([127.0, 37.27], 1, 0.12), L([127.38, 36.35], 0.9, 0.12),
+          L([128.6, 35.87], 1, 0.14), L([129.07, 35.18], 1.2, 0.13), L([129.31, 35.54], 0.8, 0.1), L([126.85, 35.16], 0.9, 0.12),
+          L([129.36, 36.02], 0.6, 0.08), L([127.15, 35.82], 0.6, 0.08), L([127.49, 36.64], 0.6, 0.08), L([128.68, 35.23], 0.7, 0.09),
+          L([128.9, 37.75], 0.4, 0.07), L([127.73, 37.88], 0.4, 0.07), L([127.92, 37.34], 0.4, 0.07), L([126.53, 33.5], 0.5, 0.08),
+          L([126.39, 34.81], 0.4, 0.07), L([127.66, 34.76], 0.5, 0.07), L([128.34, 36.12], 0.5, 0.07), L([127.15, 36.8], 0.6, 0.08),
+          L([128.73, 36.57], 0.3, 0.06), L([126.71, 35.97], 0.4, 0.07),
+          L('PYONGYANG', 0.15, 0.06, 6),
+          L([124.39, 40.13], 0.6, 0.08), L([121.6, 38.92], 1, 0.14), L([123.43, 41.8], 1.1, 0.16), L([122.99, 41.11], 0.7, 0.1),
+          L([122.23, 40.67], 0.5, 0.08), L([120.38, 36.07], 1.1, 0.14), L([121.45, 37.46], 0.7, 0.1), L([122.12, 37.51], 0.5, 0.07),
+          L([117.2, 39.13], 1.2, 0.18), L('BEIJING', 1.4, 0.22), L([125.32, 43.88], 0.9, 0.14), L([126.55, 43.84], 0.6, 0.1),
+          L([129.51, 42.9], 0.4, 0.07), L([118.18, 39.63], 0.7, 0.1), L([117.0, 36.65], 1, 0.14), L([119.16, 36.7], 0.6, 0.1),
+          L([130.4, 33.59], 1, 0.12), L([130.88, 33.88], 0.7, 0.09), L([132.46, 34.39], 0.8, 0.1), L([133.93, 34.66], 0.6, 0.08),
+          L([133.05, 35.47], 0.3, 0.06), L([139.04, 37.9], 0.6, 0.08), L([136.65, 36.56], 0.5, 0.07), L([135.5, 34.69], 1.4, 0.18),
+          L([131.9, 43.12], 0.6, 0.08),
+        ],
+        scatter: [
+          { area: SOUTH_KOREA, count: 1100, weight: 0.28 },
+          { area: NORTH_KOREA, count: 14, weight: 0.1 },
+          { area: [121,39, 124.3,39.95, 125.0,40.45, 125.8,40.9, 126.6,41.6, 127.2,41.5, 128.1,42.0, 129,42.2, 129.7,42.45, 130.4,42.8, 130,44, 124,44, 121,42], count: 700, weight: 0.2 },
+          { area: [115,35, 122.6,36.9, 122.6,37.6, 120,38, 118,39.2, 119.8,40, 121,40.6, 121,42, 115,42], count: 1200, weight: 0.25 },
+          { area: [129.6,31.5, 132,32, 132.5,34, 135.5,34.4, 136.5,35, 134,35.7, 131,34.6, 129.6,33.6], count: 500, weight: 0.22 },
+        ],
+        borders: [{ points: [126.2,37.78, 126.65,37.95, 126.95,38.1, 127.2,38.3, 127.6,38.32, 128.05,38.3, 128.3,38.6], at: B.north, dur: 1.2 }],
+        outlines: [{ points: NORTH_KOREA, at: B.north, dur: 1.6 }],
+        labels: [
+          { text: 'SOUTH KOREA', place: [129.8, 36.9], at: B.south, size: 30 },
+          { text: 'SEOUL', place: 'SEOUL', at: B.south + 0.5, size: 18, align: 'right', offset: [-70, 4], color: 'dim' },
+          { text: 'NORTH KOREA', place: [129.9, 40.1], at: B.north + 0.6, size: 30 },
+          { text: 'PYONGYANG', place: 'PYONGYANG', at: B.north + 1.2, size: 18, align: 'right', offset: [-16, 6], dot: true, color: 'dim' },
+          { text: 'CHINA', place: [123.0, 42.6], at: B.south, size: 20, color: 'dim' },
+          { text: 'JAPAN', place: [134.5, 36.4], at: B.south, size: 20, color: 'dim' },
+        ],
+      }),
+      new UF.Heading({ kicker: 'THE KOREAN PENINSULA AT NIGHT', x: 96, y: 72, at: 0.3 }),
+      new UF.SourceTag({ label: 'CREDIT', text: 'Based on NASA night-lights imagery', at: 1.2 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L100 · Ten years on                                                  */
+/* ==================================================================== */
+function sceneTenYears() {
+  const B = {
+    card: 0.2,
+    flip: 0.6,    // L100 "So what happened next?" — 2016 flips to 2026
+    flipDur: 2.0,
+    end: 5,
+  };
+  return {
+    id: 'ten-years',
+    title: 'L100 · 2016 → 2026',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'void', dust: true }),
+      new UF.CalendarFlip({ from: '2016', to: '2026', at: B.card, flipAt: B.flip, flipDur: B.flipDur, caption: 'SO WHAT HAPPENED NEXT?', y: 500 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L101 · Deguito convicted                                             */
+/* ==================================================================== */
+function sceneDeguitoConvicted() {
+  const B = {
+    card: 0.2,    // L101 "In January 2019, Maia Santos-Deguito was convicted on eight counts of money laundering."
+    end: 9,       //      "An appeals court upheld the conviction in 2023."
+  };
+  return {
+    id: 'deguito-convicted',
+    title: 'L101 · Deguito convicted',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      cardDesk(),
+      new UF.FactCard({
+        kicker: 'THE BRANCH MANAGER', date: 'JANUARY 2019',
+        text: 'Maia Santos-Deguito found guilty on eight counts of money laundering.',
+        highlight: 'guilty on eight counts',
+        person: 'Maia Santos-Deguito', status: 'convicted', statusNote: 'Upheld on appeal, 2023',
+        source: 'ABS-CBN, January 2019',
+        at: B.card,
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L102 · RCBC fined ₱1 billion                                         */
+/* ==================================================================== */
+function sceneRcbcFine() {
+  const B = {
+    card: 0.2,    // L102 "RCBC was fined one billion pesos by the Philippine central bank."
+    end: 10,      //      "It has always denied that it was part of any conspiracy..."
+  };
+  return {
+    id: 'rcbc-fine',
+    title: 'L102 · RCBC fined',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      cardDesk(),
+      new UF.FactCard({
+        kicker: 'THE BANK', date: '2016',
+        text: 'RCBC fined ₱1 billion by the Philippine central bank — the largest fine it had ever imposed.',
+        highlight: '₱1 billion',
+        note: 'RCBC has always denied being part of any conspiracy.',
+        source: 'Wikipedia summary of reporting',
+        at: B.card,
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L103 · What came back                                                */
+/* ==================================================================== */
+function sceneRecovered() {
+  const B = {
+    panel: 0.5,
+    stolen: 0.9,  // L103 "Of the 101 million..."
+    lanka: 2.6,   //      "...the Sri Lankan 20 million came back."
+    ph: 4.8,      //      "From the Philippines, only a fraction has been recovered."
+    most: 7.2,    //      "Most of it has never been seen again."
+    end: 12,
+  };
+  return {
+    id: 'recovered',
+    title: 'L103 · What came back',
+    duration: B.end,
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.Heading({ kicker: 'TEN YEARS LATER', title: 'What came back', at: 0.2 }),
+      new UF.DataPanel({
+        x: 560, y: 320, w: 800, rowH: 92, at: B.panel, title: 'THE $101 MILLION THAT GOT THROUGH',
+        rows: [
+          { at: B.stolen, label: 'STOLEN',                    value: 101e6, money: true, size: 40 },
+          { at: B.lanka,  label: 'BACK FROM SRI LANKA',       value: 20e6, money: true, color: 'green', size: 40 },
+          { at: B.ph,     label: 'BACK FROM THE PHILIPPINES', value: '≈ $15M', color: 'amber', size: 40 },
+          { at: B.most,   label: 'NEVER RECOVERED',           value: 'MOST OF IT', color: 'red', size: 40 },
+        ],
+      }),
+      new UF.SourceTag({ text: 'Reuters, 2016 · Philippine recovery figures vary by source', at: B.panel + 0.4 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L106 · The CID charge sheet                                          */
+/* ==================================================================== */
+function sceneChargeSheet() {
+  const B = {
+    card: 0.2,    // L106 "In 2026, Bangladesh's Criminal Investigation Department drafted a charge sheet naming 64 people and organisations."
+    end: 9,       //      "According to reports, they include former Bangladesh Bank officials."
+  };
+  return {
+    id: 'charge-sheet',
+    title: 'L106 · The charge sheet',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      cardDesk(),
+      new UF.FactCard({
+        kicker: 'BANGLADESH · CRIMINAL INVESTIGATION DEPARTMENT', date: 'JUNE 2026',
+        text: 'CID drafts a charge sheet naming 64 people and entities.',
+        highlight: '64 people and entities',
+        source: 'The Business Standard, 18 June 2026',
+        at: B.card,
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L106 · Presumed-innocent card after the charge-sheet card            */
+/* ==================================================================== */
+function sceneDisclaimerChargeSheet() {
+  return {
+    id: 'disclaimer-charge-sheet',
+    title: 'L106 · Presumed innocent',
+    duration: 7,
+    layers: [
+      new UF.Background({ style: 'void' }),
+      new UF.Disclaimer({
+        title: 'PLEASE NOTE', at: 0.3,
+        text: 'This is a draft charge sheet. No one named in it has been tried, and all are presumed innocent.',
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L107 · Delayed for the 98th time                                     */
+/* ==================================================================== */
+function sceneDelayed() {
+  const B = {
+    card: 0.2,    // L107 "And the final investigation report?"
+    end: 9,       //      "As of this recording, its deadline has been pushed back ninety-eight times."
+  };
+  return {
+    id: 'delayed-98',
+    title: 'L107 · Delayed 98 times',
+    duration: B.end,
+    pushIn: 0.02,
+    layers: [
+      cardDesk(),
+      new UF.FactCard({
+        kicker: 'THE INVESTIGATION REPORT', date: '14 SEPTEMBER 2026',
+        text: 'Probe report delayed for 98th time', quote: true,
+        figure: { value: 98, label: 'DEADLINE EXTENSIONS', dur: 2.2 },
+        source: 'The Business Standard, 14 September 2026',
+        at: B.card,
+      }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L111–L112 · End screen                                               */
+/* ==================================================================== */
+function sceneEndScreen() {
+  return {
+    id: 'end-screen',
+    title: 'L111–112 · End screen',
+    duration: 20,
+    transition: { in: 'fade', out: 'fade' },
+    layers: [
+      new UF.Background({ style: 'grid' }),
+      new UF.EndScreen({ at: 0.3 }),
+    ],
+  };
+}
+
+new UF.Stage({
+  title: 'EP01 · BANGLADESH BANK HEIST',
+  slug: 'ep01',
+  gap: 1.0,
+  scenes: [
+    sceneColdOpenNumber(),                                         // L02
+    sceneQuote(),                                                  // L05, reused at L65
+    sceneFlashCuts(),                                              // L07
+    chapter(1, 'THE VAULT WITH NO WALLS', 'DHAKA · 2015'),
+    sceneReservesInNewYork(),                                      // L11
+    sceneRollBack(),                                               // L16
+    sceneCvEmail(),                                                // L18
+    sceneNetworkSpread(),                                          // L21–22
+    chapter(2, 'BUILDING THE ESCAPE ROUTE', 'MAY 2015 — FEB 2016'),
+    sceneToManila(),                                               // L24
+    sceneFourAccounts(),                                           // L27
+    sceneShalika(),                                                // L30
+    sceneShalikaFounder(),                                         // L31
+    sceneFiveDayWindow(),                                          // L33–38
+    chapter(3, 'THE NIGHT OF THE HEIST', 'THURSDAY 4 FEBRUARY 2016'),
+    sceneTwoBytes(),                                               // L43–44
+    sceneDeletedRecords(),                                         // L46
+    sceneJupiterMatch(),                                           // L54
+    sceneFluke(),                                                  // L55
+    sceneFundsTrace(),                                             // L57
+    sceneSriLankaQuestions(),                                      // L60–61
+    chapter(4, 'THE WEEKEND NOBODY ANSWERED', '5–9 FEBRUARY 2016'),
+    sceneMessagesPrinted(),                                        // L70
+    sceneNoReply(),                                                // L71
+    sceneStopOrders(),                                             // L73–75
+    sceneWithdrawn(),                                              // L76
+    chapter(5, 'WASHING THE MONEY', 'MANILA · 2016'),
+    sceneMoneyFlow(),                                              // L81–82
+    scenePrivateJet(),                                             // L86
+    sceneKimWong(),                                                // L87
+    sceneMacau(),                                                  // L88
+    chapter(6, 'WHO WAS IT?', '2016 — 2018'),
+    sceneStoryBreaks(),                                            // L90–91
+    sceneLazarusCode(),                                            // L93–94
+    sceneDisclaimerCharges(),                                      // L97
+    sceneKoreaAtNight(),                                           // L98
+    chapter(7, 'TEN YEARS LATER', '2016 — 2026'),
+    sceneTenYears(),                                               // L100
+    sceneDeguitoConvicted(),                                       // L101
+    sceneRcbcFine(),                                               // L102
+    sceneRecovered(),                                              // L103
+    sceneChargeSheet(),                                            // L106
+    sceneDisclaimerChargeSheet(),                                  // L106
+    sceneDelayed(),                                                // L107
+    sceneEndScreen(),                                              // L111–112
+  ],
+});
+</script>
+</body>
+</html>

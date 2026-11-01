@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EP01 — Bangladesh Bank Heist — ANIM</title>
+<!--
+  Unfiction · EP01 · ANIM scenes
+  Every ANIM shot from the script, drawn in 2D with the toolkit instead of Blender, in script order,
+  separated by black. Every shot carries the Dramatisation label (script: "On-screen disclaimers").
+  Lines that run straight on from each other share one scene: L13–14, L50–51, L63–64, L67–68.
+
+  SPACE play/pause · R restart · ←/→ previous/next scene · 1-9 jump · H HUD
+  E export (whole reel, or one scene when ?scene=N) · SHIFT+E export every scene as its own file
+  S save a PNG still · F fullscreen · C cue sheet · K editorial check
+
+  URL options:  ?scene=3  solo one scene      ?frame=4.5  freeze at a time (scene-local with ?scene)
+                ?autoplay ?loop               ?scale=2    render at 3840x2160
+                ?clean    leave out the burned-in time chips and name tag (key them from overlays.html instead)
+
+  To retime a scene to your voice-over, change the numbers in its BEATS block only.
+-->
+<script src="../../toolkit/core/uf-core.js"></script>
+<script src="../../toolkit/core/uf-draw.js"></script>
+<script src="../../toolkit/components/uf-overlays.js"></script>
+<script src="../../toolkit/components/uf-timeline.js"></script>
+<script src="../../toolkit/components/uf-props.js"></script>
+<script src="../../toolkit/components/uf-character.js"></script>
+<script src="../../toolkit/components/uf-sets.js"></script>
+</head>
+<body>
+<script>
+'use strict';
+
+const D = UF.draw;
+const { seg, ease, lerp } = UF;
+const W = UF.W, H = UF.H;
+const CLEAN = /[?&]clean\b/.test(location.search);
+
+const drama = () => new UF.DramaLabel({ text: 'DRAMATISATION', at: 0.2, plate: true });
+const prop = (type, o) => new UF.Prop(Object.assign({ type, fadeIn: 0 }, o));
+const burn = layers => (CLEAN ? [] : layers);
+const fill = color => UF.layer(ctx => { ctx.fillStyle = color; ctx.fillRect(-W, -H, W * 3, H * 3); });
+
+/* ==================================================================== */
+/* The SWIFT room, 10th floor of Bangladesh Bank: one set, seven shots  */
+/* ==================================================================== */
+const K = 2.8;   // px per cm in the room
+const F = 940;   // floor line
+
+/**
+ * The room at night or by day. o: { mode, day, clock, printer, door, pc, monA, monB, chair }, where the
+ * last few are option overrides for that prop. Returns the props by name, the back-to-front layer list
+ * for a camera, and the room's light (drawn after any figures).
+ */
+function swiftRoom(o = {}) {
+  const night = o.mode === 'night';
+  const dim = night ? 0.62 : 0;
+  const P = (type, base, over) => prop(type, Object.assign({ scale: K, dim }, base, over));
+  const desk = P('desk', { x: 900, y: F, length: 170 });
+  const table = P('desk', { style: 'table', x: 1450, y: F, length: 80, height: 76 });
+  const top = desk.point('top')[1];
+  const p = {
+    room: new UF.Room({ floor: F, wall: night ? '#11161d' : '#3b4653', ground: night ? '#0a0b0e' : '#1d2228', dim: night ? 0.3 : 0, fadeIn: 0 }),
+    window: P('window', { x: 300, y: 420, w: 150, h: 130, mode: night ? 'night' : 'day', blinds: 0.42, dim: night ? 0.1 : 0 }),
+    tubeA: P('fluorescent', { x: 640, y: 34, length: 150, on: !night }),
+    tubeB: P('fluorescent', { x: 1360, y: 34, length: 150, on: !night }),
+    clock: P('wallClock', { x: 1300, y: 400, size: 1.05, dim: night ? 0.3 : 0 }, o.clock),
+    calendar: P('calendar', { x: 1080, y: 410, month: 'FEB', day: o.day || 4, year: 2016, dim: night ? 0.45 : 0 }),
+    door: P('door', { x: 1790, y: F, sign: 'AUTHORISED\nSTAFF ONLY' }, o.door),
+    table,
+    printer: P('printer', { x: 1450, y: table.point('top')[1], dim: night ? 0.35 : 0 }, o.printer),
+    desk,
+    pc: P('pc', { x: 660, y: F, dim: night ? 0.35 : 0 }, o.pc),
+    monA: P('monitor', { x: 845, y: top, content: 'terminal', text: 'SWIFT · MESSAGES', glow: true, dim: 0 }, o.monA),
+    monB: P('monitor', { x: 1000, y: top, content: 'dashboard', glow: true, dim: 0 }, o.monB),
+    keyboard: P('keyboard', { x: 712, y: top, length: 36 }),
+    papers: P('paperStack', { x: 1098, y: top }),
+    chair: P('chair', { x: 575, y: F }, o.chair),
+  };
+  const light = night ? [
+    new UF.Light({ type: 'pool', x: 920, y: 650, r: 560, ry: 330, color: '#6f98d8', alpha: 0.17 }),
+    new UF.Light({ type: 'pool', x: 920, y: F + 6, r: 620, ry: 80, color: '#6f98d8', alpha: 0.09 }),
+    new UF.Light({ type: 'beam', from: [[96, 602], [504, 602]], to: [[250, H + 60], [930, H + 60]], color: '#9db8e8', alpha: 0.045 }),
+  ] : [
+    new UF.Light({ type: 'pool', x: 300, y: 420, r: 1250, ry: 900, color: '#d8e6ff', alpha: 0.07 }),
+    new UF.Light({ type: 'pool', x: 640, y: 70, r: 760, ry: 440, color: '#dfe8ff', alpha: 0.09 }),
+    new UF.Light({ type: 'pool', x: 1360, y: 70, r: 760, ry: 440, color: '#dfe8ff', alpha: 0.09 }),
+    new UF.Light({ type: 'beam', from: [[96, 602], [504, 602]], to: [[400, H + 60], [1160, H + 60]], color: '#eaf1ff', alpha: 0.07 }),
+    new UF.Light({ type: 'pool', x: 1000, y: F + 10, r: 760, ry: 90, color: '#dfe8ff', alpha: 0.07 }),
+  ];
+  return {
+    p, light,
+    back: [p.room, p.window, p.tubeA, p.tubeB, p.clock, p.calendar, p.door, p.table, p.printer, p.desk, p.pc,
+      p.monA, p.monB, p.keyboard, p.papers, p.chair],
+  };
+}
+
+/* ==================================================================== */
+/* L01 · Thursday night: the empty room                                 */
+/* ==================================================================== */
+function sceneEmptyRoom() {
+  const B = {
+    up: 0.2,      // L01  black, then the room: "Thursday night, February 2016. An empty office in Dhaka."
+    cursor: 4.2,  // L01  "A cursor starts to move."
+    click: 6.2,   //      it clicks, and the terminal starts sending
+    orders: 6.6,  // L01  "Over the next few hours, thirty-five orders go out to the New York Federal Reserve."
+    end: 15,
+  };
+  const r = swiftRoom({
+    mode: 'night', day: 4, clock: { time: '20:36', run: true },
+    monA: {
+      rows: { at: B.orders, dur: 8, n: 35 },
+      cursor: { path: [[B.cursor, 0.78, 0.72], [B.cursor + 0.9, 0.6, 0.56], [B.cursor + 1.6, 0.42, 0.47], [B.click - 0.1, 0.3, 0.36]], clicks: [B.click], size: 0.18 },
+    },
+  });
+  return {
+    id: 'l01-empty-room',
+    title: 'L01 · Thursday night, the empty SWIFT room',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [...r.back, ...r.light], handheld: 1.2,
+        moves: [{ at: 0, dur: B.end, x: 870, y: 600, zoom: 1.55 }] }),
+      new UF.Light({ type: 'shade', color: '#000000', alpha: 1, levels: [{ at: B.up, to: 0, dur: 2.2 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L04 · Friday morning: the printer has stopped                        */
+/* ==================================================================== */
+function scenePrinterMorning() {
+  const B = {
+    door: 2.4,    // L04  "...came from a printer." The door opens
+    walk: 2.8,    //      a figure walks in
+    look: 4.9,    // L04  "On Friday morning, it stopped working." He looks at the empty tray
+    shrug: 7.2,   //      and shrugs
+    end: 10,
+  };
+  const r = swiftRoom({ mode: 'day', day: 5, clock: { time: '10:30', run: true },
+    printer: { status: 'error' }, door: { open: { at: B.door, dur: 0.9 } } });
+  const officer = new UF.Character({
+    role: 'staff', x: 1790, y: F, scale: K, facing: -1, at: B.walk - 0.2, fadeIn: 0.3, seed: 4,
+    actions: [
+      { at: B.walk, to: 1580, dur: 1.7 },
+      { at: B.look, pose: 'lookDown' },
+      { at: B.look + 0.7, pose: 'reach', target: r.p.printer.point('tray') },
+      { at: B.look + 1.8, pose: 'stand' },
+      { at: B.shrug, pose: 'shrug', view: 'front' },
+      { at: B.shrug + 1.6, pose: 'stand', view: 'side', facing: -1 },
+    ],
+  });
+  return {
+    id: 'l04-printer-morning',
+    title: 'L04 · Friday morning, the printer has stopped',
+    duration: B.end,
+    transition: { in: 'cut', out: 'fade' },
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [...r.back, officer, ...r.light], x: 1250, y: 600, zoom: 1.32, handheld: 1,
+        moves: [{ at: 0, dur: B.end, x: 1340, y: 620, zoom: 1.55 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L40 · Back to the room: 8:36 pm, the hackers begin                   */
+/* ==================================================================== */
+function sceneHackersBegin() {
+  const B = {
+    chip: 1.5,    // L40  "Now let's go back to that room. Thursday, the 4th of February. 8:36 pm in Dhaka."
+    begin: 6.8,   // L40  "The office is quiet. And the hackers begin." The cursor moves on its own
+    send: 8.2,    //      the first message goes out
+    end: 13,
+  };
+  const r = swiftRoom({
+    mode: 'night', day: 4, clock: { time: '20:36', run: true },
+    monA: {
+      rows: { at: B.send, dur: 40, n: 35 },
+      cursor: { path: [[B.begin, 0.76, 0.72], [B.begin + 0.7, 0.58, 0.56], [B.send - 0.1, 0.3, 0.36]], clicks: [B.send], size: 0.18 },
+    },
+  });
+  return {
+    id: 'l40-hackers-begin',
+    title: 'L40 · 8:36 pm, the hackers begin',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [...r.back, ...r.light], x: 1000, y: 560, zoom: 1.18, handheld: 1.2,
+        moves: [
+          { at: 0, dur: B.begin, x: 960, y: 580, zoom: 1.3 },
+          { at: B.begin, dur: 2.6, x: 850, y: 640, zoom: 2.1, ease: 'inOutCubic' },
+          { at: B.begin + 2.6, dur: B.end - B.begin - 2.6, zoom: 2.25 },
+        ] }),
+      ...burn([new UF.TimeChip({ items: [{ at: B.chip, time: '8:36 PM', date: 'THURSDAY 4 FEB', place: 'DHAKA' }] })]),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L47 · The printer: a page starts to feed, then stops                 */
+/* ==================================================================== */
+function scenePrinterStalls() {
+  const B = {
+    feed: 2.0,    // L47  "And it interfered with the printouts." A page starts to feed...
+    stall: 2.6,   //      ...and stops halfway out
+    quiet: 4.6,   // L47  "...never appeared on the bank's printer." The printer goes quiet
+    end: 10,
+  };
+  const r = swiftRoom({
+    mode: 'night', day: 4, clock: { time: '20:36', run: true },
+    printer: {
+      states: [{ at: B.feed - 0.5, status: 'busy' }, { at: B.quiet, status: 'ready' }],
+      whir: [{ at: B.feed - 0.4, dur: B.stall - B.feed + 0.5 }],
+      feed: [{ at: B.feed, dur: (B.stall - B.feed) / 0.5, stop: 0.5 }],
+    },
+  });
+  return {
+    id: 'l47-printer-stalls',
+    title: 'L47 · The printer stalls',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [...r.back, ...r.light, new UF.Light({ type: 'pool', x: 1450, y: 660, r: 300, ry: 200, color: '#6f98d8', alpha: 0.06 })],
+        x: 1450, y: 670, zoom: 2.5, handheld: 0.8,
+        moves: [{ at: 0, dur: B.end, y: 672, zoom: 2.85 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L63–64 · Friday 10:30 am: the tray is empty                          */
+/* ==================================================================== */
+function sceneFridayMorning() {
+  const B = {
+    chip: 0.5,    // L63  "Friday morning, the 5th of February. Around half past ten,"
+    door: 3.4,    //      the door opens
+    walk: 3.8,    //      the duty officer walks in with a folder
+    name: 5.0,    // L63  "...the duty officer, Zubair Bin Huda, comes in to collect the overnight SWIFT confirmations."
+    look: 8.0,    //      he looks down at the printer
+    tray: 10.2,   // L64  "The tray is empty."
+    press: 11.8,  // L64  "He tries to print the messages manually."
+    fail: 14.6,   // L64  "It doesn't work."
+    end: 19,
+  };
+  const r = swiftRoom({
+    mode: 'day', day: 5, clock: { time: '10:30', run: true },
+    printer: { status: 'error', press: [B.press + 0.5, B.press + 1.0, B.press + 1.5, B.press + 2.3] },
+    door: { open: { at: B.door, dur: 0.9 } },
+  });
+  const pr = r.p.printer;
+  const officer = new UF.Character({
+    role: 'staff', x: 1790, y: F, scale: K, facing: -1, holdFar: 'folder', at: B.walk - 0.2, fadeIn: 0.3, seed: 4,
+    actions: [
+      { at: B.walk, to: 1580, dur: 1.7 },
+      { at: B.look, pose: 'lookDown' },
+      { at: B.tray, pose: 'reach', target: pr.point('tray') },
+      { at: B.tray + 1.0, pose: 'lookDown' },
+      { at: B.press, pose: 'press', target: pr.point('panel') },
+      { at: B.press + 2.8, pose: 'stand' },
+      { at: B.fail, pose: 'think' },
+    ],
+  });
+  return {
+    id: 'l63-friday-morning',
+    title: 'L63–64 · Friday 10:30 am, the tray is empty',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [...r.back, officer, ...r.light], x: 1250, y: 590, zoom: 1.22, handheld: 1,
+        moves: [
+          { at: 0, dur: B.look - 0.6, zoom: 1.3 },
+          { at: B.look - 0.6, dur: 2.4, x: 1420, y: 640, zoom: 1.65, ease: 'inOutCubic' },
+          { at: B.fail, dur: 2.5, x: 1380, y: 620, zoom: 1.5 },
+        ] }),
+      ...burn([
+        new UF.TimeChip({ out: B.name + 5.5, items: [{ at: B.chip, time: '10:30 AM', date: 'FRIDAY 5 FEB', place: 'DHAKA' }] }),
+        new UF.LowerThird({ name: 'ZUBAIR BIN HUDA', role: 'Duty officer, Bangladesh Bank', status: 'official', at: B.name, out: B.name + 5 }),
+      ]),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L67–68 · Saturday: frozen, restarted, "A file is missing or changed." */
+/* ==================================================================== */
+function sceneSaturday() {
+  const B = {
+    chip: 0.5,      // L67  "Saturday."
+    frozen: 1.2,    // L67  "Bin Huda notices the SWIFT software itself isn't responding."
+    restart: 4.8,   // L67  "They try to restart it."
+    close: 7.4,     // L68  cut to the screen
+    error: 8.0,     // L68  "And a message appears on the screen: 'A file is missing or changed.'"
+    end: 14,
+  };
+  const r = swiftRoom({
+    mode: 'day', day: 6,
+    pc: { restart: B.restart },
+    monA: {
+      content: 'terminal',
+      screens: [{ at: B.frozen, content: 'frozen' }, { at: B.restart, content: 'off' }, { at: B.restart + 1.6, content: 'boot', text: 'RESTARTING' }],
+      cursor: { path: [[B.frozen + 0.4, 0.5, 0.52], [B.frozen + 1.2, 0.62, 0.42], [B.frozen + 2.4, 0.6, 0.45]],
+        clicks: [B.frozen + 1.3, B.frozen + 1.7, B.frozen + 2.1], out: B.restart, size: 0.18 },
+    },
+    monB: { screens: [{ at: B.restart, content: 'off' }, { at: B.restart + 1.6, content: 'boot' }] },
+  });
+  const seat = r.p.chair.point('seat');
+  const officer = new UF.Character({
+    role: 'staff', x: seat[0], y: F, scale: K, start: 'sitType', seat: 47, seed: 4,
+    actions: [
+      { at: B.frozen + 0.2, pose: 'sitDesk' },
+      { at: B.frozen + 1.6, pose: 'sitThink' },
+      { at: B.restart - 0.7, pose: 'sit', target: r.p.pc.point('power') },
+      { at: B.restart + 0.6, pose: 'sit' },
+      { at: B.restart + 1.4, pose: 'sitDesk' },
+    ],
+  });
+  const screen = prop('monitor', {
+    x: 960, y: 540 + 26 * 30, scale: 30,
+    screens: [{ at: 0, content: 'boot', text: 'RESTARTING' }, { at: B.error, content: 'error', text: 'A file is missing or changed.' }],
+    flickers: [{ at: B.error, dur: 0.06 }],
+    cursor: { path: [[B.error + 0.9, 0.84, 0.9], [B.error + 2.2, 0.7, 0.66]], clicks: [B.error + 2.8, B.error + 3.5], size: 0.06 },
+  });
+  return {
+    id: 'l67-saturday',
+    title: 'L67–68 · Saturday, "A file is missing or changed."',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [...r.back, officer, ...r.light], out: B.close, x: 600, y: 610, zoom: 1.6, handheld: 1,
+        moves: [{ at: 0, dur: B.close, x: 640, y: 640, zoom: 1.8 }] }),
+      new UF.Camera({ at: B.close, layers: [fill('#06080b'), screen, new UF.Light({ type: 'pool', x: 960, y: 540, r: 1150, ry: 720, color: '#9fc0e8', alpha: 0.05 })],
+        handheld: 0.6, moves: [{ at: B.close, dur: B.end - B.close, x: 960, y: 560, zoom: 1.12 }] }),
+      ...burn([new UF.TimeChip({ out: B.close, fadeOut: 0, items: [{ at: B.chip, time: '6 FEB', date: 'SATURDAY', place: 'DHAKA' }] })]),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L109 · Back to the printer: one page                                 */
+/* ==================================================================== */
+function sceneOnePage() {
+  const B = {
+    whir: 4.0,    // L109 "All of it began with a printer that stopped working on a Friday morning," Then it whirs...
+    page: 4.6,    //      ...and a single page slides out
+    push: 4.2,    // L109 "...and a man who thought it was a normal glitch." Push in and hold on the page
+    end: 12,      //      cut to black
+  };
+  const r = swiftRoom({
+    mode: 'day', day: 5, clock: { time: '10:30', run: true },
+    printer: {
+      status: 'error', states: [{ at: B.whir, status: 'busy' }, { at: B.page + 2.6, status: 'ready' }],
+      whir: [{ at: B.whir, dur: 3.0 }], pages: [{ at: B.page, dur: 2.4 }],
+    },
+  });
+  return {
+    id: 'l109-one-page',
+    title: 'L109 · The printer prints one page',
+    duration: B.end,
+    transition: { in: 'fade', out: 'cut' },
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [...r.back, ...r.light], x: 1250, y: 600, zoom: 1.32, handheld: 0.8,
+        moves: [{ at: B.push, dur: 5.5, x: 1450, y: 650, zoom: 3.0, ease: 'inOutCubic' }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* Studio: the props-only shots                                         */
+/* ==================================================================== */
+const S = 4.2;    // px per cm in the studio
+const SF = 860;   // studio floor line
+
+/** Dark seamless studio: a wall that falls off into the floor. */
+function studio() {
+  return UF.layer(ctx => {
+    let g = ctx.createLinearGradient(0, -200, 0, SF);
+    g.addColorStop(0, '#04060a');
+    g.addColorStop(1, '#121826');
+    ctx.fillStyle = g;
+    ctx.fillRect(-W, -H, W * 3, SF + H);
+    g = ctx.createLinearGradient(0, SF, 0, H + 200);
+    g.addColorStop(0, '#0e121a');
+    g.addColorStop(1, '#030405');
+    ctx.fillStyle = g;
+    ctx.fillRect(-W, SF, W * 3, H * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.045)';
+    ctx.fillRect(-W, SF, W * 3, 1.5);
+  });
+}
+
+/** A soft overhead spot on x: a faint shaft and a pool on the floor. */
+function spot(x, o = {}) {
+  const s = o.spread || 260, color = o.color || '#dfe8ff', a = o.alpha ?? 0.05;
+  return [
+    new UF.Light({ type: 'beam', from: [[x - 60, -80], [x + 60, -80]], to: [[x - s, SF + 40], [x + s, SF + 40]], color, alpha: a, levels: o.levels || [] }),
+    new UF.Light({ type: 'pool', x, y: SF + 8, r: s * 1.25, ry: 46, color, alpha: a * 2.4, levels: o.levels || [] }),
+  ];
+}
+
+/** The desk the licences and the Sri Lanka instruction lie on, under a warm lamp. */
+const deskTop = () => [
+  new UF.Background({ style: 'desk', glow: 'rgba(217,164,65,.05)' }),
+  new UF.Light({ type: 'pool', x: 960, y: 470, r: 900, ry: 560, color: '#ffd9a0', alpha: 0.07 }),
+  new UF.Light({ type: 'vignette', x: 960, y: 540, r: 1150, color: '#000000', alpha: 0.55 }),
+];
+
+/** The 35 payment instructions laid out 7 by 5, as in L48. */
+const GRID = { cols: 7, x0: 330, dx: 150, y0: 330, dy: 96 };
+const cell = i => [GRID.x0 + (i % GRID.cols) * GRID.dx, GRID.y0 + Math.floor(i / GRID.cols) * GRID.dy];
+const ENV = 1.3;                                   // envelope size in the grid
+const num = i => `#${String(i + 1).padStart(2, '0')}`;
+const plinthTop = prop('plinth', { x: 0, y: SF, scale: S }).point('top')[1];
+
+/** The New York Fed's vault on its plinth, for the shots where the instructions arrive. */
+function nyVault(x, o = {}) {
+  const vault = prop('vault', Object.assign({ x, y: plinthTop, scale: S, size: 0.62 }, o));
+  return { vault, door: vault.point('door'), layers: [prop('plinth', { x, y: SF, scale: S, label: 'NEW YORK', sub: 'FEDERAL RESERVE BANK' }), vault] };
+}
+
+/* ==================================================================== */
+/* L13–14 · SWIFT: an ultra-secure letter                               */
+/* ==================================================================== */
+function sceneSwiftLetter() {
+  const B = {
+    sets: 0.3,      // L13  "Banks use a system called SWIFT." Dhaka and New York come up
+    swift: 1.4,     //      the network between them, labelled SWIFT
+    letter: 3.4,    // L13  "Think of it as an ultra-secure letter." An open envelope
+    writes: 5.4,    // L13  "A bank writes, 'Pay this amount to this account,'"
+    fold: 7.6,      //      the instruction goes into the envelope and the flap closes
+    sign: 9.2,      // L13  "...signs it with its digital credentials," the wax seal stamps on
+    send: 11.0,     // L13  "...and sends it." The envelope flies to New York
+    check: 14.2,    // L14  "If the letter is properly signed," the seal glows green: AUTHENTIC
+    trust: 16.2,    // L14  "...the receiving bank trusts it." The vault opens
+    money: 18.0,    //      the envelope goes in and money moves out
+    billions: 20.6, // L14  "That's the whole point. Billions move every day on that trust."
+    end: 26,
+  };
+  const DX = 380, NX = 1540, E0 = [700, 640];
+  const ny = nyVault(NX, { spin: { at: B.trust, dur: 1.1 }, open: { at: B.trust + 0.8, dur: 1.6 } });
+  const door = ny.door;
+  const A = [[DX, 420], [960, 110], [NX, 360]];
+  const arcPt = u => {
+    const v = 1 - u;
+    return [v * v * A[0][0] + 2 * v * u * A[1][0] + u * u * A[2][0], v * v * A[0][1] + 2 * v * u * A[1][1] + u * u * A[2][1]];
+  };
+  const network = UF.layer((ctx, t) => {
+    const k = ease.inOutCubic(seg(t, B.swift, 1.3));
+    if (k <= 0) return;
+    ctx.save();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = UF.c('blue', 0.6);
+    ctx.setLineDash([12, 14]);
+    ctx.lineDashOffset = -t * 36;
+    ctx.beginPath();
+    const n = Math.max(1, Math.round(64 * k));
+    for (let i = 0; i <= n; i++) { const p = arcPt(i / 64); if (i) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = UF.c('blue');
+    for (const u of [0, 1]) if (u <= k) { const p = arcPt(u); ctx.beginPath(); ctx.arc(p[0], p[1], 6, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  });
+  const hover = [NX, ny.vault.point('top')[1] - 85];
+  const envO = {
+    x: E0[0], y: E0[1], scale: S, size: 2.4, at: B.letter, fadeIn: 0.4, out: B.money + 0.55, fadeOut: 0.12,
+    open: { at: B.fold + 0.95, dur: 0.5, from: 1, to: 0 }, sealAt: B.sign, sealGlow: B.check,
+    moves: [
+      { at: B.send, dur: 2.0, to: hover, arc: 260, ease: 'inOutCubic' },
+      { at: B.money, dur: 0.6, to: door, size: 0.6, ease: 'inCubic' },
+    ],
+  };
+  const envBack = prop('envelope', Object.assign({ part: 'back' }, envO));
+  const envFront = prop('envelope', Object.assign({ part: 'front' }, envO));
+  const paper = prop('message', {
+    x: 1040, y: 380, scale: S, size: 5, at: B.writes, fadeIn: 0.5, out: B.fold + 1.0, fadeOut: 0.1,
+    fields: [['PAY', 'THIS AMOUNT'], ['TO', 'THIS ACCOUNT']],
+    moves: [{ at: B.fold, dur: 0.95, to: [E0[0], E0[1] + 10], size: 0.42, ease: 'inOutCubic' }],
+  });
+  const cash = [];
+  for (let i = 0; i < 14; i++) {
+    const at = B.money + 0.35 + i * 0.5;
+    cash.push(prop('cash', { style: 'bundle', x: door[0], y: door[1] + 12, scale: S, size: 1.4, at, fadeIn: 0.15, out: at + 1.7, fadeOut: 0.2,
+      moves: [{ at, dur: 1.9, to: [W + 160, door[1] - 50 + (i % 3) * 34], arc: 40, ease: 'inCubic' }] }));
+  }
+  const stream = [];
+  for (let i = 0; i < 12; i++) {
+    const at = B.billions + i * 0.36;
+    const from = i % 3 === 0 ? [DX + 70, 560] : [-140, 260 + (i * 97) % 380];
+    stream.push(prop('envelope', { x: from[0], y: from[1], scale: S, size: 0.9, at, fadeIn: 0.15, out: at + 1.55, fadeOut: 0.1, sealGlow: at,
+      moves: [{ at, dur: 1.6, to: door, size: 0.4, arc: 140 + (i % 4) * 40, ease: 'inOutSine' }] }));
+  }
+  const cam = new UF.Camera({
+    layers: [studio(), ...spot(DX), ...spot(NX), network,
+      prop('plinth', { x: DX, y: SF, scale: S, label: 'DHAKA', sub: 'BANGLADESH BANK', at: B.sets, fadeIn: 0.6 }),
+      prop('bankModel', { x: DX, y: plinthTop, scale: S, at: B.sets, fadeIn: 0.6 }),
+      ...ny.layers, ...cash, ...stream, envBack, paper, envFront],
+    handheld: 0.8,
+    moves: [
+      { at: 0, dur: B.send, x: 860, y: 540, zoom: 1.08 },
+      { at: B.send, dur: 2.4, x: 1100, y: 520 },
+      { at: B.billions, dur: 5, x: 960, y: 500, zoom: 1.0 },
+    ],
+  });
+  for (const l of ny.layers) { l.at = B.sets + 0.3; l.fadeIn = 0.6; }
+  return {
+    id: 'l13-swift-letter',
+    title: 'L13–14 · SWIFT, an ultra-secure letter',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      cam,
+      new UF.Tag({ text: 'SWIFT', sub: 'MESSAGES BETWEEN BANKS', at: B.swift + 0.9, out: B.letter + 1.6, anchor: arcPt(0.5), camera: cam, dy: -66, color: 'blue', icon: 'globe' }),
+      new UF.Tag({ text: 'SWIFT MESSAGE', at: B.sign + 0.5, out: B.check - 0.1, anchor: t => envFront.point('top', t), camera: cam, dy: -72, color: 'blue', icon: 'email' }),
+      new UF.Tag({ text: 'AUTHENTIC', at: B.check + 0.3, out: B.money - 0.1, anchor: t => envFront.point('top', t), camera: cam, dy: -72, color: 'green', icon: 'check' }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L28 · Four licences, all fake                                        */
+/* ==================================================================== */
+function sceneFakeLicences() {
+  const B = {
+    first: 0.5,   // L28  "Later it emerged that the driver's licences used to open them..."
+    gap: 0.6,     //      the four licences slide in one after another
+    stamp: 3.8,   //      "...were fake." The stamp lands on the first
+    sgap: 0.6,    //      then on each of the others
+    same: 8.6,    // L28  "...all claimed the same job title and the same salary,"
+    diff: 11.6,   // L28  "...despite working at different companies."
+    end: 17,
+  };
+  const XS = [330, 750, 1170, 1590], Y = 500, CS = 7.2, ST = 6.5;
+  const cards = XS.map((x, i) => {
+    const at = B.first + i * B.gap;
+    return prop('idCard', { x: W + 220, y: Y - 30, scale: S, size: CS, seed: 11 + i * 7, rotate: 0.22, at, fadeIn: 0.1,
+      moves: [{ at, dur: 0.85, to: [x, Y], rotate: [-0.05, 0.03, -0.025, 0.045][i], ease: 'outCubic' }] });
+  });
+  const hover = i => [XS[i] + 46, Y - 74];
+  const moves = [{ at: B.stamp - 1.1, dur: 0.7, to: hover(0), size: ST * 1.35, ease: 'outCubic' }];
+  XS.forEach((x, i) => {
+    const ts = B.stamp + i * B.sgap;
+    if (i) moves.push({ at: ts - 0.42, dur: 0.3, to: hover(i), size: ST * 1.35 });
+    moves.push({ at: ts - 0.1, dur: 0.1, to: [x, Y], size: ST, ease: 'inQuad' });
+    moves.push({ at: ts + 0.12, dur: 0.22, to: hover(i), size: ST * 1.35, ease: 'outQuad' });
+  });
+  moves.push({ at: B.stamp + 3 * B.sgap + 0.6, dur: 0.7, to: [W + 260, -220], size: ST * 1.4, ease: 'inCubic' });
+  const stamp = prop('rubberStamp', { x: W + 260, y: -220, scale: S, size: ST * 1.4, rotate: 0.08, moves });
+  const inks = XS.map((x, i) => new UF.Stamp({ text: 'FAKE', x, y: Y + 6, size: 66, angle: [-12, -8, -15, -10][i], at: B.stamp + i * B.sgap }));
+  const bracket = UF.layer((ctx, t) => {
+    const k = ease.inOutCubic(seg(t, B.same, 0.8));
+    if (k <= 0) return;
+    const y = Y + 120, x0 = XS[0] - 120, x1 = XS[3] + 120;
+    ctx.save();
+    ctx.strokeStyle = UF.c('amber', 0.9);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x0, y - 18 * k); ctx.lineTo(x0, y); ctx.lineTo(lerp(x0, x1, k), y);
+    if (k >= 1) ctx.lineTo(x1, y - 18);
+    for (const x of XS) if (lerp(x0, x1, k) >= x) { ctx.moveTo(x, y); ctx.lineTo(x, y - 14); }
+    ctx.stroke();
+    ctx.restore();
+  });
+  return {
+    id: 'l28-fake-licences',
+    title: 'L28 · Four licences, all fake',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [...deskTop(), ...cards, ...inks, bracket, stamp], handheld: 0.6,
+        moves: [{ at: 0, dur: B.end, x: 960, y: 560, zoom: 1.06 }] }),
+      new UF.Tag({ text: 'SAME JOB TITLE · SAME SALARY', at: B.same + 0.5, x: 960, y: 760, color: 'amber', size: 30 }),
+      new UF.Tag({ text: 'FOUR DIFFERENT EMPLOYERS', at: B.diff, x: 960, y: 862, color: 'blue', size: 24 }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L48 · Thirty-five instructions, about $951 million                   */
+/* ==================================================================== */
+function sceneThirtyFive() {
+  const B = {
+    open: 0.2,    // L48  "Now the stage was clear."
+    first: 1.4,   // L48  "Over the next hours, the hackers sent thirty-five payment instructions to the New York Fed,"
+    gap: 0.25,    //      one more every quarter of a second
+    end: 14,      //      "...totalling about 951 million dollars." The counter lands with the last one
+  };
+  const envs = [];
+  for (let i = 0; i < 35; i++) {
+    const at = B.first + i * B.gap;
+    envs.push(prop('envelope', { x: -140, y: 500, scale: S, size: ENV, rotate: -0.3, tag: num(i), at, fadeIn: 0.12,
+      moves: [{ at, dur: 0.7, to: cell(i), rotate: 0, arc: 80, ease: 'outCubic' }] }));
+  }
+  const ny = nyVault(1640);
+  const landed = B.first + 0.7;
+  return {
+    id: 'l48-thirty-five',
+    title: 'L48 · Thirty-five instructions',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [studio(), ...spot(780, { spread: 620, alpha: 0.035 }), ...spot(1640), ...ny.layers, ...envs], handheld: 0.6,
+        moves: [{ at: 0, dur: B.end, x: 940, y: 530, zoom: 1.04 }] }),
+      new UF.Counter({ value: 951, prefix: '$', suffix: ' MILLION', at: landed, dur: 34 * B.gap + 0.1, easing: 'linear',
+        x: 780, y: 160, size: 92, label: 'APPROX. TOTAL · 35 PAYMENT INSTRUCTIONS' }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L50–51 · Rejected, fixed, resubmitted                                */
+/* ==================================================================== */
+function sceneRejected() {
+  const B = {
+    bounce: 0.3,  // L50  "They weren't formatted correctly." Each bounces back, stamped REJECTED
+    wave: 0.03,   //      one after another across the grid
+    label: 0.9,   //      REJECTED — FORMAT ERROR
+    fix: 5.0,     // L51  "So the hackers fixed them," re-stamped RESUBMITTED
+    send: 6.8,    //      "...and sent them again." They fly into the vault
+    end: 10,
+  };
+  const ny = nyVault(1640, { spin: { at: B.send - 1.0, dur: 0.9 }, open: { at: B.send - 0.3, dur: 0.9 } });
+  const first = [], second = [];
+  for (let i = 0; i < 35; i++) {
+    const [x, y] = cell(i), d = i * B.wave, at = B.bounce + d;
+    first.push(prop('envelope', { x, y, scale: S, size: ENV, tag: num(i), out: B.fix + d * 0.5, fadeOut: 0.15,
+      stamps: [{ at: at + 0.12, text: 'REJECTED', color: 'red', size: 3.6, kick: i % 7 ? null : { shake: 0.004, decay: 12 } }],
+      moves: [{ at, dur: 0.16, to: [x + 22, y], ease: 'outQuad' }, { at: at + 0.16, dur: 0.55, to: [x - 40, y], ease: 'outBack' }] }));
+    const go = B.send + i * 0.05;
+    second.push(prop('envelope', { x: x - 40, y, scale: S, size: ENV, tag: num(i), at: B.fix + d * 0.5, fadeIn: 0.15, out: go + 0.85, fadeOut: 0.1,
+      stamps: [{ at: B.fix + d * 0.5 + 0.1, text: 'RESUBMITTED', color: 'amber', size: 2.7 }],
+      moves: [{ at: go, dur: 0.9, to: ny.door, size: 0.35, arc: 60, ease: 'inCubic' }] }));
+  }
+  return {
+    id: 'l50-rejected',
+    title: 'L50–51 · Rejected, then resubmitted',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [studio(), ...spot(780, { spread: 620, alpha: 0.035 }), ...spot(1640), ...ny.layers, ...first, ...second], handheld: 0.6,
+        moves: [{ at: 0, dur: B.end, x: 940, y: 530, zoom: 1.04 }] }),
+      new UF.Tag({ text: 'REJECTED — FORMAT ERROR', sub: 'MISSING REQUIRED DETAILS', at: B.label, out: B.fix - 0.3, x: 780, y: 160, color: 'red', icon: 'cross', size: 30 }),
+      new UF.Tag({ text: 'RESUBMITTED', at: B.fix + 0.4, x: 780, y: 160, color: 'amber', icon: 'email', size: 30 }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L53 · Jupiter Street                                                 */
+/* ==================================================================== */
+function sceneJupiterStreet() {
+  const B = {
+    open: 0.4,    // L53  "The Philippine bank branch..." The envelope opens
+    slide: 0.9,   //      the instruction slides out
+    push: 1.6,    //      push in on the beneficiary bank line
+    mark: 2.6,    // L53  "...was on Jupiter Street." JUPITER pulses red
+    end: 7,
+  };
+  const E = [960, 760], o = { x: E[0], y: E[1], scale: S, size: 4.6, open: { at: B.open, dur: 0.45 } };
+  const msg = prop('message', {
+    x: E[0], y: 830, scale: S, size: 3.3, at: B.slide - 0.05, fadeIn: 0.1,
+    fields: [
+      ['FROM', 'BANGLADESH BANK, DHAKA'],
+      ['TO', 'FEDERAL RESERVE BANK, NY'],
+      ['AMOUNT', { redact: 10 }],
+      ['BENEFICIARY BANK', 'RCBC, JUPITER STREET, MAKATI'],
+      ['BENEFICIARY', { redact: 14 }],
+    ],
+    mark: { word: 'JUPITER', at: B.mark, style: 'pulse' },
+    moves: [{ at: B.slide, dur: 1.0, to: [E[0], 482], ease: 'outCubic' }],
+  });
+  const m = msg.point('mark', B.slide + 1.5);
+  return {
+    id: 'l53-jupiter-street',
+    title: 'L53 · Jupiter Street',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [studio(), ...spot(960, { spread: 420 }), prop('envelope', Object.assign({ part: 'back' }, o)), msg, prop('envelope', Object.assign({ part: 'front' }, o))],
+        x: 960, y: 600, zoom: 1.12, handheld: 0.6,
+        moves: [{ at: B.push, dur: 1.8, x: m[0], y: m[1] + 10, zoom: 3.0, ease: 'inOutCubic' }, { at: B.push + 1.8, dur: 3, zoom: 3.15 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L56 · Thirty held, five paid                                         */
+/* ==================================================================== */
+function sceneHeldPaid() {
+  const B = {
+    split: 0.3,   // L56  the 35 split: thirty to the left, five to the right
+    held: 1.6,    //      "Thirty instructions, worth about 850 million dollars, were held." Grey, then locked
+    paid: 5.0,    // L56  "But by then, five had already gone through." Five glow orange
+    gone: 8.4,    // L56  "One hundred and one million dollars." The five leave
+    end: 12,
+  };
+  const PAID = [4, 9, 17, 23, 32];
+  const envs = [];
+  let h = 0, p = 0;
+  for (let i = 0; i < 35; i++) {
+    const paid = PAID.includes(i), j = paid ? p++ : h++;
+    const to = paid ? [1500, 330 + j * 96] : [230 + (j % 6) * 150, 330 + Math.floor(j / 6) * 96];
+    const d = j * 0.03;
+    const o = { x: cell(i)[0], y: cell(i)[1], scale: S, size: ENV,
+      moves: [{ at: B.split + (paid ? 0.2 : 0) + d, dur: 0.9, to, arc: paid ? 60 : 20 }] };
+    if (paid) {
+      o.tints = [{ at: B.paid + j * 0.12, color: '#e09a3e', glow: '#ff9a3c', dur: 0.45 }];
+      o.moves.push({ at: B.gone + j * 0.15, dur: 1.3, to: [W + 200, to[1] - 40], ease: 'inCubic' });
+      o.out = B.gone + j * 0.15 + 1.25;
+      o.fadeOut = 0.1;
+    } else {
+      o.tints = [{ at: B.held + d, color: '#5a5e65', dur: 0.4 }];
+      o.lock = B.held + 0.65 + d;
+    }
+    envs.push(prop('envelope', o));
+  }
+  return {
+    id: 'l56-held-paid',
+    title: 'L56 · Thirty held, five paid',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [studio(), ...spot(605, { spread: 560, alpha: 0.035 }), ...spot(1500, { spread: 240, color: '#ffd9a0', alpha: 0.04 }), ...envs],
+        handheld: 0.6, moves: [{ at: 0, dur: B.end, x: 900, y: 540, zoom: 1.04 }] }),
+      new UF.Tag({ text: 'HELD — $850 MILLION', sub: '30 PAYMENT INSTRUCTIONS', at: B.held + 1.1, x: 605, y: 190, color: 'dim', icon: 'lock', size: 30 }),
+      new UF.Tag({ text: 'PAID — $101 MILLION', sub: '5 PAYMENT INSTRUCTIONS', at: B.paid + 0.6, x: 1500, y: 190, color: 'amber', icon: 'money', size: 30 }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L59 · "Shalika Fundation"                                            */
+/* ==================================================================== */
+function sceneFundation() {
+  const B = {
+    paper: 0.2,   // L59  the Sri Lanka payment instruction
+    push: 0.8,    //      push in on the beneficiary line
+    circle: 2.2,  // L59  "The transfer was made out to the Shalika 'Fundation',"
+    note: 3.4,    //      "...not Foundation."
+    end: 8,
+  };
+  const msg = prop('message', {
+    x: 960, y: 560, scale: S, size: 3.8, rotate: -0.025,
+    fields: [
+      ['FROM', 'BANGLADESH BANK, DHAKA'],
+      ['AMOUNT', 'USD 20,000,000'],
+      ['BENEFICIARY BANK', 'PAN ASIA BANK, COLOMBO'],
+      ['BENEFICIARY', 'SHALIKA FUNDATION'],
+    ],
+    mark: { word: 'FUNDATION', at: B.circle, style: 'circle', note: 'FOUNDATION', noteAt: B.note },
+  });
+  const m = msg.point('mark');
+  return {
+    id: 'l59-fundation',
+    title: 'L59 · "Shalika Fundation"',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [...deskTop(), msg], zoom: 1.05, handheld: 0.6,
+        moves: [{ at: B.push, dur: 1.6, x: m[0], y: m[1] + 30, zoom: 2.6, ease: 'inOutCubic' }, { at: B.push + 1.6, dur: 5, zoom: 2.75 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L10 · Night over Dhaka                                               */
+/* ==================================================================== */
+function sceneDhakaNight() {
+  const B = {
+    glide: 0,     // L10  "Bangladesh Bank is the central bank of a country of more than 160 million people."
+    arrive: 16.5, // L10  "...fuel, food and everything it imports." The glide settles on the bank
+    end: 18,
+  };
+  return {
+    id: 'l10-dhaka-night',
+    title: 'L10 · Night over Dhaka',
+    duration: B.end,
+    pushIn: 0,
+    layers: [new UF.Skyline({ glide: { at: B.glide, dur: B.arrive, ease: 'inOutSine' } }), drama()],
+  };
+}
+
+/* ==================================================================== */
+/* L17 · An office, and an email from a job seeker                      */
+/* ==================================================================== */
+const KO = 5;      // px per cm in the office
+const FO = 1180;   // office floor line, just below the frame
+
+function sceneEmailArrives() {
+  const B = {
+    type: 0,      // L17  "In January 2015, according to the FBI,"
+    toast: 4.4,   // L17  "...several Bangladesh Bank employees received a polite email from a job seeker."
+    end: 10,
+  };
+  const P = (type, o) => prop(type, Object.assign({ scale: KO }, o));
+  const desk = P('desk', { x: 1180, y: FO, length: 140 });
+  const top = desk.point('top')[1];
+  const chair = P('chair', { x: 760, y: FO });
+  // Unmistakably not the duty officer of L63–64 (build, shirt, hair): the shot must not point at anyone.
+  const worker = new UF.Character({
+    role: 'staff', build: 'slim', look: { top: '#5f6f84', hair: 'long' }, x: chair.point('seat')[0], y: FO, scale: KO,
+    start: 'sitType', seed: 9,
+    glow: { color: '#9fc0e8', amount: t => 0.16 + 0.14 * ease.outCubic(seg(t, B.toast, 0.4)), dir: [1, 0.05] },
+    actions: [{ at: B.toast + 0.5, pose: 'sitDesk' }],
+  });
+  const layers = [
+    new UF.Room({ floor: FO, wall: '#1a2029', ground: '#0e1013', dim: 0.2, fadeIn: 0 }),
+    P('window', { x: 330, y: 330, w: 90, h: 80, mode: 'dawn', blinds: 0.8 }),
+    P('plant', { x: 1720, y: FO, height: 130 }),
+    desk,
+    P('monitor', { x: 1240, y: top, content: 'email', glow: true,
+      toast: { at: B.toast, title: 'NEW EMAIL', text: 'Job enquiry', sub: 'From: Rasel Ahlam', w: 0.62 } }),
+    P('keyboard', { x: 930, y: top, length: 40 }),
+    P('mug', { x: 1062, y: top }),
+    P('paperStack', { x: 1432, y: top, count: 18 }),
+    P('lamp', { x: 1492, y: top }),
+    chair,
+    worker,
+    new UF.Light({ type: 'beam', from: [[105, 530], [555, 530]], to: [[300, H + 60], [900, H + 60]], color: '#c9d6e6', alpha: 0.035 }),
+    new UF.Light({ type: 'pool', x: 1240, y: 690, r: 560, ry: 380, color: '#9fc0e8', alpha: 0.09, levels: [{ at: B.toast, to: 1.7, dur: 0.4 }] }),
+    new UF.Light({ type: 'vignette', x: 960, y: 600, r: 1100, color: '#000000', alpha: 0.5 }),
+  ];
+  return {
+    id: 'l17-email-arrives',
+    title: 'L17 · An email from a job seeker',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers, x: 960, y: 640, zoom: 1.12, handheld: 0.8,
+        moves: [{ at: B.toast - 0.8, dur: 2.2, x: 1010, y: 660, zoom: 2.0, ease: 'inOutCubic' }, { at: B.toast + 1.4, dur: 5, zoom: 2.1 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L20 · The click                                                      */
+/* ==================================================================== */
+/** The job email of L18 on screen: the same sender, subject, body and link as the GFX recreation. */
+function emailScreen(B) {
+  const ui = UF.props.ui;
+  const body = ['Hello,', 'I would like to apply for a position at your bank.', 'My CV and cover letter are at the link below.', 'Thank you for your time.'];
+  return (ctx, x, y, w, h, t) => {
+    const u = h / 30;
+    const win = ui.window(ctx, x, y, w, h, { title: 'INBOX', bar: 2.2 * u, fill: '#f3f1ec' });
+    ctx.fillStyle = '#e4e1da';
+    ctx.fillRect(win.x, win.y, 9 * u, win.h);
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = i === 1 ? '#3a6ea5' : '#b9b5ac';
+      ctx.fillRect(win.x + u, win.y + (1.4 + i * 1.6) * u, (i === 1 ? 6 : 4 + (i % 3)) * u, 0.55 * u);
+    }
+    const cx = win.x + 11 * u, top = win.y;
+    ctx.fillStyle = '#7a5a8a';
+    ctx.beginPath(); ctx.arc(cx + 1.3 * u, top + 2.9 * u, 1.3 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.font = UF.font.sans(1.3 * u, '700');
+    D.text(ctx, 'R', cx + 1.3 * u, top + 2.95 * u, { color: '#ffffff', align: 'center', baseline: 'middle' });
+    ctx.font = UF.font.sans(1.05 * u, '700');
+    D.text(ctx, 'Rasel Ahlam', cx + 3.3 * u, top + 2.4 * u, { color: '#1f2328', baseline: 'middle' });
+    ctx.font = UF.font.sans(0.75 * u);
+    D.text(ctx, 'to Bangladesh Bank staff', cx + 3.3 * u, top + 3.7 * u, { color: '#6a6f76', baseline: 'middle' });
+    D.text(ctx, 'January 2015', x + w - 1.6 * u, top + 2.4 * u, { color: '#6a6f76', align: 'right', baseline: 'middle' });
+    ctx.font = UF.font.sans(1.55 * u, '700');
+    D.text(ctx, 'Job enquiry', cx, top + 6.6 * u, { color: '#1f2328', baseline: 'middle' });
+    ctx.font = UF.font.sans(0.95 * u);
+    body.forEach((ln, i) => D.text(ctx, ln, cx, top + (9.4 + i * 1.6) * u, { color: '#2a2e35', baseline: 'middle' }));
+    const down = t >= B.click && t < B.click + 0.18 ? 1 : 0;
+    ui.button(ctx, cx, top + 16.6 * u, 21 * u, 3 * u, 'Download my CV and cover letter', { hot: seg(t, B.hover, 0.3), down, size: 0.95 * u });
+    if (t < B.click + 0.15) return;
+    const k = ease.outCubic(seg(t, B.click + 0.15, 0.35)), p = seg(t, B.fill, B.done - B.fill);
+    const dw = 18 * u, dh = 3.6 * u, dx = x + w - dw - 1.2 * u, dy = y + h - dh - 1.2 * u + (1 - k) * 2 * u;
+    ctx.save();
+    ctx.globalAlpha *= k;
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(dx + 0.25 * u, dy + 0.3 * u, dw, dh);
+    ctx.fillStyle = '#fbfaf7';
+    ctx.fillRect(dx, dy, dw, dh);
+    D.icon(ctx, 'doc', dx + 1.6 * u, dy + dh / 2, 2.2 * u, { color: '#3a6ea5', width: 8 });
+    ctx.font = UF.font.sans(0.8 * u, '600');
+    D.text(ctx, p >= 1 ? 'Download complete' : 'CV and cover letter', dx + 3.2 * u, dy + 1.2 * u, { color: '#1f2328', baseline: 'middle' });
+    ui.progress(ctx, dx + 3.2 * u, dy + 2.3 * u, dw - 4.4 * u, 0.55 * u, p, { fill: p >= 1 ? '#2f7d4f' : '#3a6ea5' });
+    ctx.restore();
+  };
+}
+
+function sceneDownload() {
+  const B = {
+    cursor: 1.0,  // L20  close on the screen; the pointer drifts to the link
+    hover: 2.8,
+    click: 3.4,   // L20  "The FBI says the name was a cover used by the hackers." The click
+    fill: 3.9,    //      a progress bar fills
+    done: 7.0,
+    glitch: 7.8,  // L20  "...downloaded the file, and with it, malware." One frame of flicker
+    end: 11,
+  };
+  const screen = prop('monitor', {
+    x: 960, y: 540 + 26 * 30, scale: 30, content: emailScreen(B),
+    flickers: [{ at: B.glitch, dur: 0.034 }],
+    cursor: { path: [[B.cursor, 0.74, 0.86], [B.cursor + 1.0, 0.55, 0.74], [B.hover, 0.41, 0.68]], clicks: [B.click], size: 0.05, out: B.done + 0.3 },
+  });
+  return {
+    id: 'l20-download',
+    title: 'L20 · The click',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [fill('#06080b'), screen, new UF.Light({ type: 'pool', x: 960, y: 540, r: 1150, ry: 720, color: '#9fc0e8', alpha: 0.05 })],
+        x: 960, y: 540, zoom: 1.12, handheld: 0.5, moves: [{ at: 0, dur: B.end, x: 960, y: 590, zoom: 1.22 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L25 · Jupiter Street, Makati, by day                                 */
+/* ==================================================================== */
+function sceneMakatiStreet() {
+  const B = {
+    open: 0,      // L25  "On Jupiter Street in Makati, there's a branch of RCBC,"
+    end: 11,      //      "...one of the Philippines' large banks." A slow push toward the branch
+  };
+  const WALK = 700, CURB = 790, k = 0.82;
+  const P = (type, o) => prop(type, Object.assign({ scale: k }, o));
+  const street = (part, parallax) => new UF.Street({ mode: 'day', part, walk: WALK, curb: CURB, lanes: [962], seed: 8, parallax });
+  const people = [
+    { x: -120, to: 2100, y: 750, s: 0.86, look: { top: '#6e5446', hair: 'long' } },
+    { x: 1480, to: -200, y: 766, s: 0.9, look: { top: '#3f5a48', hair: 'short' } },
+    { x: 2060, to: 200, y: 742, s: 0.84, look: { top: '#c9c6bd', bottom: '#3b4047', hair: 'cap' } },
+    { x: 620, to: 2100, y: 772, s: 0.92, look: { top: '#2f4d6b', hair: 'crop' } },
+  ].map((w, i) => new UF.Character({ role: 'civilian', look: w.look, x: w.x, y: w.y, scale: w.s, seed: 50 + i, actions: [{ at: 0, to: w.to }] }));
+  const pavement = [
+    P('tree', { x: 470, y: 772, height: 520, seed: 4 }),
+    P('tree', { x: 1250, y: 776, height: 560, seed: 7 }),
+    P('streetLamp', { x: 1390, y: 780, on: false }),
+    ...people,
+  ].sort((a, b) => a.y - b.y);
+  const layers = [
+    street('sky', 0.15), street('city', 0.45), street('ground', 1),
+    P('building', { x: 180, y: WALK, w: 640, h: 1700, awning: '#7a1d24', seed: 5 }),
+    P('building', { x: 1520, y: WALK, w: 700, h: 2000, color: '#a9a397', awning: '#2f5d8a', seed: 9 }),
+    P('building', { x: 2080, y: WALK, w: 600, h: 1500, color: '#c4bcae', shop: false, seed: 13 }),
+    P('branch', { x: 860, y: WALK, sign: 'BANK', sub: 'JUPITER STREET BRANCH' }),
+    ...pavement,
+    // Traffic keeps right in the Philippines: the lane nearest the camera runs left to right, the far one right to left.
+    new UF.Traffic({ mode: 'day', lanes: [
+      { y: 892, dir: -1, speed: 330, scale: 0.82, styles: ['sedan', 'jeepney', 'van'], seed: 3 },
+      { y: 1032, dir: 1, speed: 420, scale: 0.95, styles: ['sedan', 'jeepney', 'van', 'sedan'], seed: 5 },
+    ] }),
+    P('streetSign', { x: 230, y: 1180, text: 'JUPITER ST', height: 420, letter: 26, scale: 1.6, parallax: 1.25 }),
+    new UF.Light({ type: 'vignette', x: 960, y: 540, r: 1150, color: '#000000', alpha: 0.28 }),
+  ];
+  return {
+    id: 'l25-jupiter-street-day',
+    title: 'L25 · Jupiter Street, Makati',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers, moves: [{ at: 0, dur: B.end, x: 860, y: 520, zoom: 1.12 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L26 · Inside the branch: four customers, four folders                */
+/* ==================================================================== */
+const KB = 2.6;   // px per cm in the branch
+const FB = 920;   // branch floor line
+
+function sceneNewAccounts() {
+  const B = {
+    open: 0.3,    // L26  "On the 15th of May 2015, four people opened US dollar accounts at that branch."
+    names: 5.6,   // L26  "The names on the accounts were ..." The camera runs along the line; no names on screen
+    hand: 8.2,    //      the first in line hands a folder across the counter
+    end: 15,
+  };
+  const P = (type, o) => prop(type, Object.assign({ scale: KB }, o));
+  const counter = P('counter', { x: 1640, y: FB });
+  const ct = counter.point('top');
+  const teller = new UF.Character({
+    role: 'staff', look: { top: '#d8d2c4', lanyard: 'amber' }, x: 1760, y: FB, scale: KB, facing: -1, seed: 31,
+    actions: [
+      { at: B.hand + 0.3, pose: 'receive', target: [ct[0] + 40, ct[1] - 22] },
+      { at: B.hand + 0.9, hold: 'folder' },
+      { at: B.hand + 1.7, pose: 'lookDown' },
+    ],
+  });
+  const LINE = [
+    { x: 1484, start: 'stand', look: { top: '#6e5446', hair: 'long' }, folder: '#2f5d8a' },
+    { x: 1268, start: 'lookDown', look: { top: '#3f5a48', hair: 'short' }, folder: '#7a1d24' },
+    { x: 1052, start: 'wait', look: { top: '#55606b', hair: 'crop' }, folder: '#3a3f46' },
+    { x: 836, start: 'stand', look: { top: '#8a6a3a', hair: 'bun' }, folder: '#2f7d4f' },
+  ];
+  const customers = LINE.map((q, i) => new UF.Character({
+    role: 'civilian', look: q.look, x: q.x, y: FB + 24, scale: KB, start: q.start, seed: 40 + i,
+    hold: { type: 'folder', color: q.folder },
+    actions: i ? [] : [
+      { at: B.hand, pose: 'handOver', target: [ct[0] + 12, ct[1] - 8] },
+      { at: B.hand + 0.9, hold: null, blend: 0.1 },
+      { at: B.hand + 1.4, pose: 'stand' },
+    ],
+  }));
+  const layers = [
+    new UF.Room({ floor: FB, wall: '#4a4640', ground: '#24211d', fadeIn: 0 }),
+    ...[520, 1000, 1480].map(x => P('fluorescent', { x, y: 30, length: 150 })),
+    P('plaque', { x: 1600, y: 330, text: 'NEW ACCOUNTS', w: 130, h: 30 }),
+    P('calendar', { x: 1250, y: 420, month: 'MAY', day: 15, year: 2015 }),
+    P('plant', { x: 330, y: FB, height: 120 }),
+    P('stanchion', { x: 700, y: FB, posts: 3 }),
+    teller,
+    counter,
+    ...customers,
+    new UF.Light({ type: 'pool', x: 1000, y: 60, r: 1100, ry: 520, color: '#fff3dc', alpha: 0.08 }),
+    new UF.Light({ type: 'pool', x: 1000, y: FB + 10, r: 1100, ry: 110, color: '#fff3dc', alpha: 0.06 }),
+    new UF.Light({ type: 'vignette', x: 960, y: 560, r: 1150, color: '#000000', alpha: 0.4 }),
+  ];
+  return {
+    id: 'l26-new-accounts',
+    title: 'L26 · Four customers, four folders',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers, x: 760, y: 600, zoom: 1.35, handheld: 0.8,
+        moves: [{ at: 0.4, dur: B.hand - 0.4, x: 1205, ease: 'inOutSine' }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L78 · Night: bags into a car boot outside a branch                   */
+/* ==================================================================== */
+function sceneCarBoot() {
+  const B = {
+    boot: 1.0,    // L78  "At a Philippine Senate hearing in March 2016," the boot lid rises
+    load1: 1.9,   //      the first bag goes in
+    load2: 4.5,   // L78  "...an RCBC employee testified that around 20 million pesos in cash"
+    load3: 7.9,   //      "...had been loaded into the branch manager's car."
+    end: 14,
+  };
+  const LOT = 812, KC = 1.6, KF = 1.65;   // lot line; car scale; figures, px per cm
+  const carO = { x: 860, y: 930, scale: KC, style: 'sedan', color: '#2b2f36', flip: true, boot: { at: B.boot, dur: 1.0 } };
+  const carBack = prop('car', Object.assign({ part: 'back' }, carO));
+  const carFront = prop('car', Object.assign({ part: 'front' }, carO));
+  const boot = carFront.point('boot');
+  const T = [boot[0] - 5, boot[1] - 48];          // where a bag is held over the open boot
+  const bag = 40 * KF;                             // hand to the bottom of a hanging duffel
+  const drops = [B.load1 + 0.8, B.load2 + 0.8, B.load3 + 0.8];
+  const dropped = drops.map(at => prop('duffel', { x: T[0], y: T[1] + bag, scale: KF, at, fadeIn: 0, out: at + 0.45, fadeOut: 0.05,
+    moves: [{ at, dur: 0.32, to: [T[0] - 18, T[1] + bag + 72], ease: 'inQuad' }] }));
+  const pickUp = B.load2 + 0.5;
+  const PILE = [1520, 958];
+  const pile = prop('duffel', { x: PILE[0], y: PILE[1], scale: KF, out: pickUp, fadeOut: 0 });
+  const dark = { dim: 0.3, seed: 60 };
+  const a = new UF.Character(Object.assign({}, dark, {
+    role: 'civilian', look: { top: '#2a2d33', bottom: '#1b1d21', hair: 'cap', hairColor: '#111214' },
+    x: 1262, y: 940, scale: KF, facing: -1, hold: 'duffel',
+    actions: [
+      { at: B.load1, pose: 'reach', target: T, blend: 0.45 },
+      { at: drops[0], hold: null, blend: 0.1 },
+      { at: drops[0] + 0.4, pose: 'stand' },
+      { at: drops[0] + 0.8, to: 1440 },
+      { at: pickUp - 0.6, pose: 'lift', target: [PILE[0], PILE[1] - bag], blend: 0.45 },
+      { at: pickUp, hold: 'duffel', blend: 0.1 },
+      { at: pickUp + 0.4, pose: 'stand' },
+      { at: pickUp + 0.7, to: 1262 },
+      { at: B.load3, pose: 'reach', target: T, blend: 0.45 },
+      { at: drops[2], hold: null, blend: 0.1 },
+      { at: drops[2] + 0.4, pose: 'stand' },
+    ],
+  }));
+  const b = new UF.Character(Object.assign({}, dark, {
+    role: 'civilian', look: { top: '#3a3532', bottom: '#202226', hair: 'short' }, seed: 61,
+    x: 2120, y: 966, scale: KF * 1.03, hold: 'duffel',
+    actions: [
+      { at: 0.5, to: 1290 },
+      { at: B.load2, pose: 'reach', target: [T[0] + 6, T[1] + 4], blend: 0.45 },
+      { at: drops[1], hold: null, blend: 0.1 },
+      { at: drops[1] + 0.4, pose: 'stand' },
+      { at: drops[1] + 0.7, to: [1390, 985] },
+      { at: drops[1] + 1.4, pose: 'wait', facing: -1 },
+    ],
+  }));
+  const lot = UF.layer(ctx => {
+    const g = ctx.createLinearGradient(0, LOT, 0, H);
+    g.addColorStop(0, '#16171b');
+    g.addColorStop(1, '#09090b');
+    ctx.fillStyle = g;
+    ctx.fillRect(-W, LOT, W * 3, H);
+    ctx.fillStyle = '#2a2b30';
+    ctx.fillRect(-W, LOT, W * 3, 12);
+    ctx.strokeStyle = 'rgba(232,228,218,0.14)';
+    ctx.lineWidth = 6;
+    for (const x of [-520, 400, 1320, 2240]) { ctx.beginPath(); ctx.moveTo(x, LOT + 40); ctx.lineTo(x - 130, H + 20); ctx.stroke(); }
+  });
+  const thuds = UF.layer((ctx, t, fx) => {
+    fx.kick(t, B.boot, { shake: 0.0015, decay: 12 });
+    for (const at of drops) fx.kick(t, at + 0.3, { shake: 0.004, decay: 9 });
+  });
+  const layers = [
+    new UF.Street({ mode: 'night', part: 'sky', walk: LOT, parallax: 0.15 }),
+    new UF.Street({ mode: 'night', part: 'city', walk: LOT, seed: 12, parallax: 0.45 }),
+    lot,
+    prop('branch', { x: 1300, y: LOT, scale: 1.15, mode: 'night', sign: 'BANK' }),
+    prop('streetLamp', { x: 300, y: 890, scale: 1.4, height: 560 }),
+    new UF.Light({ type: 'pool', x: 1300, y: LOT + 30, r: 760, ry: 130, color: '#ffcf8a', alpha: 0.08 }),
+    carBack, ...dropped, carFront,
+    a, pile, b,
+    thuds,
+    new UF.Light({ type: 'vignette', x: 960, y: 560, r: 1100, color: '#000000', alpha: 0.5 }),
+  ];
+  return {
+    id: 'l78-car-boot',
+    title: 'L78 · Night, bags into a car boot',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers, handheld: 0.6, moves: [{ at: 0, dur: B.end, x: 1080, y: 610, zoom: 1.15 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L83 · Chips across the felt                                          */
+/* ==================================================================== */
+function sceneChips() {
+  const B = {
+    push1: 1.0,   // L83  "Why casinos? Because in a casino, money becomes chips," a stack slides in
+    push2: 2.2,   //      "...chips become bets," a second
+    spill: 4.9,   //      "...and bets become 'winnings'." The top of the first stack spills
+    end: 12,      //      "Once that happens, the trail goes cold."
+  };
+  const KT = 11, FY = 1200;                                                // felt scale at its near edge, near edge
+  const persp = y => KT * lerp(1, 96 / 150, (FY - y) / (90 * KT));         // px per cm on the felt at height y
+  const chip = (x, y, o) => prop('chips', Object.assign({ x, y, scale: persp(y), tilt: 0.42 }, o));
+  const slide = (from, to, at, dur) => ({ at, dur, to, size: persp(to[1]) / persp(from[1]), ease: 'outCubic' });
+  const S1 = [[560, 1010], [900, 800]], S2 = [[1420, 1040], [1110, 790]];
+  const stacks = [
+    chip(1000, 760, { count: 14, color: 'amber' }),
+    chip(S2[0][0], S2[0][1], { count: 8, color: 'black', moves: [slide(S2[0], S2[1], B.push2, 3.8)] }),
+    chip(S1[0][0], S1[0][1], { count: 6, color: 'red', moves: [slide(S1[0], S1[1], B.push1, 3.6)] }),
+  ];
+  const spilled = [[-150, 60], [-60, 120], [90, 96], [170, 30]].map(([dx, dy], i) => {
+    const lift = (6 + i) * 0.378, at = B.spill + i * 0.07;
+    const from = [S1[0][0], S1[0][1] - lift * persp(S1[0][1])], mid = [S1[1][0], S1[1][1] - lift * persp(S1[1][1])];
+    const to = [S1[1][0] + dx, S1[1][1] + dy];
+    return chip(from[0], from[1], { scale: persp(S1[0][1]), count: 1, color: ['red', 'white', 'red', 'green'][i], moves: [
+      { at: B.push1, dur: 3.6, to: mid, size: persp(S1[1][1]) / persp(S1[0][1]), ease: 'outCubic' },
+      { at, dur: 1.7, to, size: persp(to[1]) / persp(S1[0][1]), rotate: (i % 2 ? 1 : -1) * 0.5, arc: 26, ease: 'outCubic' },
+    ] });
+  });
+  const pieces = [...stacks, ...spilled];
+  return {
+    id: 'l83-chips',
+    title: 'L83 · Chips across the felt',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers: [
+        fill('#070505'),
+        new UF.Bokeh({ count: 22, rect: [0, -40, W, 200], size: [24, 80], alpha: 0.16 }),
+        prop('baccaratTable', { view: 'top', x: 960, y: FY, scale: KT }),
+        ...pieces,
+        new UF.Light({ type: 'pool', x: 980, y: 780, r: 720, ry: 400, color: '#ffd59a', alpha: 0.12 }),
+        new UF.Light({ type: 'vignette', x: 980, y: 700, r: 1050, color: '#000000', alpha: 0.6 }),
+      ], x: 960, y: 640, zoom: 1.15, handheld: 0.5,
+      moves: [{ at: 0, dur: 10, x: 990, y: 800, zoom: 2.2, rotate: -0.025 }] }),
+      drama(),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L84 · A private room at the baccarat table                           */
+/* ==================================================================== */
+const KR = 3;     // px per cm in the private room
+const FR = 900;   // floor line
+
+/** A bar stool under a player seen from behind. */
+const stool = (x, y, k) => UF.layer(ctx => {
+  const top = y - 47 * k;
+  ctx.fillStyle = '#1a1412';
+  ctx.fillRect(x - 3 * k, top, 6 * k, y - top - 2 * k);
+  ctx.fillStyle = '#2e221c';
+  ctx.beginPath(); ctx.ellipse(x, y - 1.5 * k, 16 * k, 3 * k, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4a2c1e';
+  ctx.beginPath(); ctx.ellipse(x, top, 21 * k, 5 * k, 0, 0, Math.PI * 2); ctx.fill();
+});
+
+function scenePrivateRoom() {
+  const B = {
+    deal: 1.6,    // L84  "According to the BBC's investigation, the money was played in private rooms, at baccarat,"
+    slide1: 6.0,  // L84  "...a simple game where an experienced player can expect to keep most of their stake." A stack goes in
+    slide2: 11.0, // L84  "For weeks, players sat at the tables, washing it."
+    end: 18,
+  };
+  const P = (type, o) => prop(type, Object.assign({ scale: KR }, o));
+  const table = P('baccaratTable', { x: 960, y: FR, length: 300 });
+  const felt = FR - 85 * KR;
+  const stack = (x, count, color, o) => prop('chips', Object.assign({ x, y: felt, scale: 4.5, tilt: 0.15, count, color }, o));
+  const chips = [
+    stack(700, 24, 'black'), stack(745, 18, 'red'), stack(1140, 30, 'amber'), stack(1188, 22, 'green'), stack(1230, 26, 'black'),
+    stack(790, 20, 'red', { moves: [{ at: B.slide1, dur: 1.8, to: [905, felt], ease: 'outCubic' }] }),
+    stack(1100, 16, 'white', { moves: [{ at: B.slide2, dur: 1.8, to: [1015, felt], ease: 'outCubic' }] }),
+  ];
+  const dealer = new UF.Character({
+    role: 'dealer', view: 'front', start: 'deal', x: 960, y: FR - 20, scale: 2.85, seed: 70,
+    hold: { type: 'playingCard', face: 'down' },
+    actions: [{ at: B.deal + 3.2, pose: 'stand' }, { at: B.deal + 4.4, pose: 'deal' }, { at: B.slide2 + 2.4, pose: 'stand' }],
+  });
+  const back = [
+    { x: 790, role: 'suit', seed: 71 },
+    { x: 1130, role: 'civilian', look: { top: '#3a2f2a', hair: 'short' }, seed: 72 },
+  ];
+  const backs = back.flatMap(p => [
+    stool(p.x, FR + 40, 3.1),
+    new UF.Character({ role: p.role, look: p.look, view: 'back', start: 'sitTable', x: p.x, y: FR + 40, scale: 3.1, seed: p.seed,
+      actions: [{ at: 5 + p.seed % 3, pose: 'sit' }, { at: 8 + p.seed % 3, pose: 'sitTable' }] }),
+  ]);
+  const chairL = P('chair', { x: 448, y: FR, color: '#2a1a14' });
+  const chairR = P('chair', { x: 1472, y: FR, color: '#2a1a14', flip: true });
+  const sides = [
+    new UF.Character({ role: 'suit', x: chairL.point('seat')[0], y: FR, scale: KR, start: 'sit', seed: 73,
+      actions: [{ at: 0, pose: 'sit', target: [530, felt - 6] }] }),
+    new UF.Character({ role: 'civilian', look: { top: '#4a3c35', hair: 'crop' }, x: chairR.point('seat')[0], y: FR, scale: KR, facing: -1, start: 'sit', seed: 74,
+      actions: [{ at: 0, pose: 'sit', target: [1390, felt - 6] }] }),
+  ];
+  const layers = [
+    new UF.Room({ floor: FR, wall: '#160e0c', ground: '#0b0807', fadeIn: 0 }),
+    new UF.Bokeh({ count: 16, rect: [0, 60, W, 440], alpha: 0.08, seed: 9 }),
+    ...[660, 960, 1260].map(x => P('pendant', { x, y: 0, drop: 70, reach: 134 })),
+    dealer,
+    chairL, chairR,
+    table,
+    ...chips,
+    ...sides,
+    ...backs,
+    new UF.Light({ type: 'pool', x: 960, y: felt, r: 760, ry: 260, color: '#ffd59a', alpha: 0.08 }),
+    new UF.Light({ type: 'vignette', x: 960, y: 560, r: 1050, color: '#000000', alpha: 0.55 }),
+  ];
+  return {
+    id: 'l84-private-room',
+    title: 'L84 · A private room at baccarat',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      new UF.Camera({ layers, x: 900, y: 560, zoom: 1.18, handheld: 0.6, moves: [{ at: 0, dur: B.end, x: 1020 }] }),
+      drama(),
+    ],
+  };
+}
+
+new UF.Stage({
+  title: 'EP01 · BANGLADESH BANK HEIST · ANIM',
+  slug: 'ep01-anim',
+  gap: 1.0,
+  scenes: [
+    sceneEmptyRoom(),                                               // L01
+    scenePrinterMorning(),                                          // L04
+    sceneDhakaNight(),                                              // L10
+    sceneSwiftLetter(),                                             // L13–14
+    sceneEmailArrives(),                                            // L17
+    sceneDownload(),                                                // L20
+    sceneMakatiStreet(),                                            // L25
+    sceneNewAccounts(),                                             // L26
+    sceneFakeLicences(),                                            // L28
+    sceneHackersBegin(),                                            // L40
+    scenePrinterStalls(),                                           // L47
+    sceneThirtyFive(),                                              // L48
+    sceneRejected(),                                                // L50–51
+    sceneJupiterStreet(),                                           // L53
+    sceneHeldPaid(),                                                // L56
+    sceneFundation(),                                               // L59
+    sceneFridayMorning(),                                           // L63–64
+    sceneSaturday(),                                                // L67–68
+    sceneCarBoot(),                                                 // L78
+    sceneChips(),                                                   // L83
+    scenePrivateRoom(),                                             // L84
+    sceneOnePage(),                                                 // L109
+  ],
+});
+</script>
+</body>
+</html>

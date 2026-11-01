@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UNFICTION — Intro</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: "Courier New", Courier, monospace;
+  }
+  body.playing, body.playing * { cursor: none !important; }
+
+  #stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    transform: translate(-50%, -50%);
+    background: #000;
+  }
+  #gl { display: block; width: 100%; height: 100%; }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    background: #07080a;
+    color: #e8e4da;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity .35s ease;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay .mark {
+    font-size: clamp(11px, 1.05vw, 18px);
+    letter-spacing: .9em;
+    padding-left: .9em;
+    opacity: .85;
+  }
+  #overlay .rule {
+    width: clamp(60px, 9vw, 160px);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #c1121f, transparent);
+  }
+  #overlay .cta {
+    font-size: clamp(10px, .8vw, 14px);
+    letter-spacing: .55em;
+    padding-left: .55em;
+    opacity: .5;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: .28; } 50% { opacity: .7; } }
+
+  #hint {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    color: rgba(232, 228, 218, .45);
+    font-size: 12px;
+    letter-spacing: .25em;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .3s ease;
+  }
+  #hint.show { opacity: 1; }
+  #hint b { color: rgba(232, 228, 218, .8); font-weight: normal; }
+
+  #fallback {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+    color: #e8e4da;
+    font-size: 14px;
+    letter-spacing: .12em;
+    line-height: 1.8;
+    background: #07080a;
+  }
+  #fallback.show { display: flex; }
+  #fallback pre { color: #c1121f; font-size: 11px; text-align: left; white-space: pre-wrap; max-width: 900px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <div id="overlay">
+    <div class="mark">UNFICTION</div>
+    <div class="rule"></div>
+    <div class="cta">CLICK TO PLAY</div>
+  </div>
+  <div id="fallback"></div>
+</div>
+<div id="hint" class="show"><b>R</b> REPLAY &nbsp;·&nbsp; <b>F</b> FULLSCREEN &nbsp;·&nbsp; <b>H</b> HIDE / SHOW HINTS</div>
+
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   CONFIG — edit colours, text, timings and sound level here.
+   Tip: open the file with ?frame=4.6 in the URL to preview a still frame
+   at that time (no audio), e.g. for thumbnails.
+   Add ?autoplay to start immediately (e.g. as an OBS Browser Source).
+   ===================================================================== */
+const CONFIG = {
+  colors: {
+    black:    '#07080a',
+    graphite: '#14171c',
+    blue:     '#3a6ea5',
+    paper:    '#e8e4da',
+    red:      '#c1121f',
+  },
+  text: {
+    prefix:  'UN',
+    word:    'FICTION',
+    tagline: 'REAL SCAMS. REAL CRIMES. UNTOLD STORIES.',
+    amount:  '$951,000,000.00',
+  },
+  fonts: {
+    logo: ['Impact', 'Haettenschweiler', 'Arial Narrow', 'Helvetica Neue Condensed Bold', 'HelveticaNeue-CondensedBold', 'Oswald', 'Arial'],
+    mono: '"Courier New", Courier, monospace',
+  },
+  logo: {
+    size: 250,          // px on a 1920x1080 canvas
+    tracking: 0.035,    // letter spacing, in em
+    centerY: 0.445,     // vertical centre of the logo (0 = top, 1 = bottom)
+    tagSize: 27,
+    tagSpacing: 0.46,   // tagline letter spacing, in em
+    tagGap: 92,         // px between logo and tagline
+  },
+  timing: {
+    duration:      7.0,
+    evidenceStart: 0.80,
+    hits:     [0.80, 1.10, 1.36, 1.58, 1.77, 1.93, 2.07, 2.19, 2.30, 2.39, 2.47, 2.54],
+    hitFrags: [0,    1,    2,    3,    4,    5,    0,    3,    1,    4,    2,    5   ],
+    collapseStart: 2.60,
+    blackStart:    3.133,   // 4 frames of black at 60 fps
+    logoStart:     3.20,
+    fictionSlide:  3.44,
+    unStart:       3.50,
+    unStep:        0.12,
+    redStart:      3.62,
+    redRetract:    3.92,
+    ringOut:       3.65,
+    sweepStart:    3.85,
+    sweepEnd:      5.05,
+    tagStart:      5.40,
+    tagEnd:        6.15,
+    exitStart:     6.62,
+    exitEnd:       6.92,
+  },
+  audio: {
+    master: 0.9,
+  },
+  render: {
+    maxPixelRatio: 2,
+    maxWidth: 3840,
+  },
+};
+
+/* =====================================================================
+   Utilities
+   ===================================================================== */
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = {
+  outExpo:   x => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x)),
+  inExpo:    x => (x <= 0 ? 0 : Math.pow(2, 10 * x - 10)),
+  outCubic:  x => 1 - Math.pow(1 - x, 3),
+  inCubic:   x => x * x * x,
+  inQuad:    x => x * x,
+  inOutCubic:x => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
+  inOutSine: x => -(Math.cos(Math.PI * x) - 1) / 2,
+};
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+const rgba = (h, a) => { const [r, g, b] = hexRgb(h).map(v => Math.round(v * 255)); return `rgba(${r},${g},${b},${a})`; };
+const COL = CONFIG.colors;
+const T = CONFIG.timing;
+T.unTimes = [...CONFIG.text.prefix].map((_, i) => T.unStart + i * T.unStep);
+
+/* =====================================================================
+   DOM
+   ===================================================================== */
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('gl');
+const overlay = document.getElementById('overlay');
+const hint = document.getElementById('hint');
+const fallback = document.getElementById('fallback');
+
+function showFallback(msg, detail) {
+  fallback.innerHTML = `<div>${msg}${detail ? `<pre>${detail}</pre>` : ''}</div>`;
+  fallback.classList.add('show');
+  overlay.classList.add('hidden');
+}
+
+const gl = canvas.getContext('webgl2', {
+  antialias: false, alpha: false, depth: false, stencil: false,
+  premultipliedAlpha: false, preserveDrawingBuffer: false, powerPreference: 'high-performance',
+});
+if (!gl) {
+  showFallback('THIS INTRO NEEDS WEBGL2.<br>Please open it in a recent version of Chrome, Edge, Firefox or Safari.');
+  return;
+}
+
+/* =====================================================================
+   Fonts (system only)
+   ===================================================================== */
+function fontAvailable(name) {
+  const c = document.createElement('canvas').getContext('2d');
+  const s = 'UNFICTION 0123456789 mmmwwwiii';
+  let differs = false;
+  for (const base of ['monospace', 'serif']) {
+    c.font = `72px ${base}`;
+    const a = c.measureText(s).width;
+    c.font = `72px "${name}", ${base}`;
+    if (Math.abs(c.measureText(s).width - a) > 0.5) differs = true;
+  }
+  return differs;
+}
+const LOGO_FAMILY = CONFIG.fonts.logo.find(fontAvailable) || 'Arial';
+const LOGO_WEIGHT = /impact|haettenschweiler/i.test(LOGO_FAMILY) ? 'normal' : 'bold';
+const logoFont = px => `${LOGO_WEIGHT} ${px}px "${LOGO_FAMILY}", sans-serif`;
+const MONO = CONFIG.fonts.mono;
+const monoFont = (px, weight = 'normal') => `${weight} ${px}px ${MONO}`;
+
+function drawSpaced(x, text, px, py, spacing, align = 'left') {
+  const chars = [...text];
+  const widths = chars.map(ch => x.measureText(ch).width);
+  const total = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
+  let cx = align === 'center' ? px - total / 2 : align === 'right' ? px - total : px;
+  chars.forEach((ch, i) => { x.fillText(ch, cx, py); cx += widths[i] + spacing; });
+  return total;
+}
+
+function typeText(x, text, px, py, rng, color, jitter = 0.9) {
+  let cx = px;
+  for (const ch of text) {
+    x.globalAlpha = 0.72 + rng() * 0.28;
+    x.fillStyle = color;
+    x.fillText(ch, cx, py + (rng() - 0.5) * jitter);
+    cx += x.measureText(ch).width;
+  }
+  x.globalAlpha = 1;
+  return cx - px;
+}
+
+const money = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function makeCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  return c;
+}
+
+/* =====================================================================
+   Procedural evidence fragments (drawn once into canvases)
+   ===================================================================== */
+const FW = 1280, FH = 720;
+const cv = {
+  ledger:  makeCanvas(FW, FH),
+  doc:     makeCanvas(FW, FH),
+  print:   makeCanvas(FW, FH),
+  map:     makeCanvas(FW, FH),
+  counter: makeCanvas(FW, FH),
+  stamp:   makeCanvas(FW, FH),
+  logo:    makeCanvas(1920, 1080),
+};
+
+function paperSheet(x, rng, cx, cy, w, h, rot, tone) {
+  x.save();
+  x.translate(cx, cy);
+  x.rotate(rot);
+  x.shadowColor = 'rgba(0,0,0,0.75)';
+  x.shadowBlur = 50;
+  x.shadowOffsetY = 12;
+  x.fillStyle = tone;
+  x.fillRect(-w / 2, -h / 2, w, h);
+  x.shadowColor = 'transparent';
+  for (let i = 0; i < 4200; i++) {
+    x.fillStyle = `rgba(45,38,30,${rng() * 0.07})`;
+    x.fillRect(-w / 2 + rng() * w, -h / 2 + rng() * h, 0.6 + rng() * 1.8, 0.6 + rng() * 1.8);
+  }
+  for (let i = 0; i < 70; i++) {
+    x.strokeStyle = `rgba(60,50,40,${0.02 + rng() * 0.04})`;
+    x.lineWidth = 0.6;
+    const fx = -w / 2 + rng() * w, fy = -h / 2 + rng() * h;
+    x.beginPath(); x.moveTo(fx, fy); x.quadraticCurveTo(fx + rng() * 30, fy + rng() * 10 - 5, fx + 20 + rng() * 40, fy + rng() * 8 - 4); x.stroke();
+  }
+  const g = x.createRadialGradient(0, 0, Math.min(w, h) * 0.15, 0, 0, Math.max(w, h) * 0.72);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(25,18,10,0.42)');
+  x.fillStyle = g;
+  x.fillRect(-w / 2, -h / 2, w, h);
+}
+
+function drawLedger() {
+  const x = cv.ledger.getContext('2d');
+  const rng = mulberry32(11);
+  x.fillStyle = COL.graphite; x.fillRect(0, 0, FW, FH);
+  const w = 1180, h = 780;
+  paperSheet(x, rng, FW / 2 + 10, FH / 2 + 30, w, h, -0.028, '#cfc9bc');
+  const L = -w / 2 + 60;
+  const ink = '#24272c';
+
+  x.font = monoFont(26, 'bold');
+  x.fillStyle = ink;
+  drawSpaced(x, 'GENERAL LEDGER', L, -h / 2 + 78, 6);
+  x.font = monoFont(17);
+  x.fillStyle = 'rgba(36,39,44,0.75)';
+  drawSpaced(x, 'NOSTRO ACCOUNT · USD · CORRESPONDENT: FRB NEW YORK', L, -h / 2 + 108, 2);
+  drawSpaced(x, 'PAGE 0214', w / 2 - 60, -h / 2 + 78, 3, 'right');
+
+  const cols = [L, L + 120, L + 270, w / 2 - 270, w / 2 - 60];
+  const headY = -h / 2 + 160;
+  x.font = monoFont(16, 'bold');
+  x.fillStyle = ink;
+  ['DATE', 'REF', 'DESCRIPTION'].forEach((s, i) => drawSpaced(x, s, cols[i], headY, 2));
+  drawSpaced(x, 'DEBIT', cols[3], headY, 2, 'right');
+  drawSpaced(x, 'BALANCE', cols[4], headY, 2, 'right');
+
+  x.strokeStyle = rgba(COL.blue, 0.55);
+  x.lineWidth = 1.4;
+  x.beginPath(); x.moveTo(L - 20, headY + 14); x.lineTo(w / 2 - 40, headY + 14); x.stroke();
+  x.strokeStyle = rgba(COL.blue, 0.35);
+  x.beginPath(); x.moveTo(L - 22, -h / 2 + 130); x.lineTo(L - 22, h / 2); x.stroke();
+
+  const desc = ['NOSTRO SETTLEMENT', 'IMPORT LC PAYMENT', 'FX SWAP MATURITY', 'CORRESPONDENT FEE', 'TREASURY PLACEMENT',
+    'MT202 COVER', 'RESERVE TRANSFER', 'BILATERAL CLEARING', 'MT103 OUTWARD', 'INTEREST ACCRUAL', 'MT103 OUTWARD', 'GOVT IMPORT BILL', 'NOSTRO SETTLEMENT'];
+  let bal = 1983451220.17;
+  x.font = monoFont(17);
+  const rowH = 36;
+  const struck = 8;
+  for (let i = 0; i < desc.length; i++) {
+    const y = headY + 50 + i * rowH;
+    const day = String(1 + Math.floor(i / 3)).padStart(2, '0');
+    let amt = Math.round((0.3 + rng() * 14) * 1e6 * 100) / 100;
+    let d = desc[i];
+    if (i === struck) { amt = 81000000; d = 'MT103 OUTWARD  BENEF ****4417'; }
+    if (i === struck + 2) { amt = 20000000; d = 'MT103 OUTWARD  BENEF ****0912'; }
+    bal -= amt;
+    typeText(x, `${day} FEB`, cols[0], y, rng, ink);
+    typeText(x, `FT16${String(30000 + Math.floor(rng() * 69999))}`, cols[1], y, rng, ink);
+    typeText(x, d, cols[2], y, rng, ink);
+    x.textAlign = 'right';
+    x.globalAlpha = 0.88; x.fillStyle = ink;
+    x.fillText(money(amt), cols[3], y + (rng() - 0.5));
+    x.fillText(money(bal), cols[4], y + (rng() - 0.5));
+    x.globalAlpha = 1;
+    x.textAlign = 'left';
+    x.strokeStyle = rgba(COL.blue, 0.28);
+    x.lineWidth = 1;
+    x.beginPath(); x.moveTo(L - 20, y + 12); x.lineTo(w / 2 - 40, y + 12); x.stroke();
+
+    if (i === struck) {
+      x.strokeStyle = COL.red;
+      x.lineCap = 'round';
+      for (let k = 0; k < 2; k++) {
+        x.lineWidth = 3.2 - k * 1.2;
+        x.globalAlpha = 0.95 - k * 0.3;
+        x.beginPath();
+        x.moveTo(cols[0] - 14, y - 6 + k * 3);
+        x.bezierCurveTo(cols[2], y - 9 + k * 2, cols[3] - 100, y - 3 + k * 2, cols[4] + 16, y - 7 + k * 3);
+        x.stroke();
+      }
+      x.globalAlpha = 1;
+      x.lineWidth = 2;
+      x.beginPath(); x.ellipse(cols[3] - 70, y - 6, 92, 22, -0.03, 0, Math.PI * 2); x.stroke();
+    }
+  }
+  x.restore();
+}
+
+function drawDocument() {
+  const x = cv.doc.getContext('2d');
+  const rng = mulberry32(23);
+  x.fillStyle = COL.graphite; x.fillRect(0, 0, FW, FH);
+  const w = 940, h = 1040;
+  paperSheet(x, rng, FW / 2 - 20, FH / 2 + 150, w, h, 0.018, '#d3cdbf');
+  const L = -w / 2 + 80, R = w / 2 - 80;
+  const top = -h / 2;
+  const ink = '#202328';
+
+  x.font = monoFont(30, 'bold');
+  x.fillStyle = ink;
+  drawSpaced(x, 'CONFIDENTIAL', 0, top + 90, 12, 'center');
+  x.strokeStyle = ink; x.lineWidth = 2;
+  x.strokeRect(-190, top + 52, 380, 56);
+
+  x.font = monoFont(18);
+  typeText(x, 'CASE FILE No.  16-0204', L, top + 160, rng, ink);
+  typeText(x, 'DATE:  06 FEB 2016', R - 230, top + 160, rng, ink);
+  typeText(x, 'SUBJECT:', L, top + 200, rng, ink);
+  x.fillStyle = '#0b0b0c';
+  x.fillRect(L + 110, top + 182, 420, 24);
+
+  const words = ['transfer', 'authorised', 'terminal', 'no record', 'weekend', 'instruction', 'printer', 'account', 'not found', 'Jupiter', 'via', 'the', 'was'];
+  x.font = monoFont(18);
+  for (let line = 0; line < 15; line++) {
+    const y = top + 262 + line * 40;
+    let cx = L + (line % 5 === 0 ? 40 : 0);
+    const end = line % 6 === 5 ? lerp(L, R, 0.55) : R;
+    while (cx < end - 30) {
+      const seg = Math.min(end - cx, 50 + rng() * 210);
+      if (rng() < 0.74) {
+        x.fillStyle = '#0a0a0b';
+        x.beginPath();
+        x.moveTo(cx, y - 17 + rng() * 2);
+        x.lineTo(cx + seg, y - 17 + rng() * 2);
+        x.lineTo(cx + seg + rng() * 2, y + 6 + rng() * 2);
+        x.lineTo(cx, y + 6 + rng() * 2);
+        x.closePath(); x.fill();
+      } else {
+        const wd = words[Math.floor(rng() * words.length)];
+        if (x.measureText(wd).width < seg) typeText(x, wd, cx, y, rng, ink);
+      }
+      cx += seg + 14;
+    }
+  }
+  x.restore();
+}
+
+function drawPrintOverlay() {
+  const x = cv.print.getContext('2d');
+  x.clearRect(0, 0, FW, FH);
+  const cx = FW * 0.36, cy = FH * 0.5;
+  const bw = 225, bh = 285;
+
+  x.strokeStyle = rgba(COL.blue, 0.22);
+  x.lineWidth = 1;
+  x.setLineDash([4, 6]);
+  x.beginPath(); x.moveTo(0, cy); x.lineTo(FW, cy); x.moveTo(cx, 0); x.lineTo(cx, FH); x.stroke();
+  x.setLineDash([]);
+
+  x.strokeStyle = rgba(COL.blue, 0.9);
+  x.lineWidth = 2;
+  const corner = 34;
+  [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => {
+    const px = cx + sx * bw, py = cy + sy * bh;
+    x.beginPath(); x.moveTo(px - sx * corner, py); x.lineTo(px, py); x.lineTo(px, py - sy * corner); x.stroke();
+  });
+
+  x.strokeStyle = COL.red;
+  x.lineWidth = 2;
+  [[-58, -92], [44, -130], [76, 26], [-34, 96], [18, 190], [-92, 30]].forEach(([dx, dy]) => {
+    x.beginPath(); x.arc(cx + dx, cy + dy, 10, 0, Math.PI * 2); x.stroke();
+  });
+
+  x.fillStyle = rgba(COL.paper, 0.55);
+  x.font = monoFont(15);
+  drawSpaced(x, 'EVIDENCE 07  /  FORENSIC SCAN', 52, 56, 3);
+
+  const px0 = 780;
+  x.fillStyle = rgba(COL.paper, 0.9);
+  x.font = monoFont(22, 'bold');
+  drawSpaced(x, 'LATENT PRINT ANALYSIS', px0, 200, 4);
+  x.fillStyle = rgba(COL.blue, 0.8);
+  x.fillRect(px0, 218, 400, 2);
+  x.font = monoFont(17);
+  const rows = [['ITEM', '07'], ['SURFACE', 'SWIFT TERMINAL'], ['RIDGE COUNT', '14'], ['MINUTIAE', '12 / 12'], ['PATTERN', 'WHORL']];
+  rows.forEach(([k, v], i) => {
+    const y = 262 + i * 36;
+    x.fillStyle = rgba(COL.paper, 0.55);
+    drawSpaced(x, k, px0, y, 2);
+    x.fillStyle = rgba(COL.paper, 0.9);
+    drawSpaced(x, v, px0 + 400, y, 2, 'right');
+  });
+  x.fillStyle = rgba(COL.paper, 0.55);
+  drawSpaced(x, 'DATABASE MATCH', px0, 470, 2);
+  x.fillStyle = rgba(COL.blue, 0.25); x.fillRect(px0, 486, 400, 8);
+  x.fillStyle = rgba(COL.blue, 0.9); x.fillRect(px0, 486, 312, 8);
+  x.fillStyle = COL.red;
+  x.font = monoFont(19, 'bold');
+  drawSpaced(x, 'IDENTITY: UNKNOWN', px0, 540, 4);
+}
+
+const LAND = [
+  // North America
+  [-168,66,-162,70,-156,71.5,-140,70,-128,70,-115,68,-95,70,-85,69,-80,73,-70,67,-62,60,-56,53,-60,47,-66,44,-70,42,-74,40,-76,35,-81,31,-80,25.5,-82,27,-84,30,-90,29.5,-95,29,-97,26,-97.5,22,-95,19,-90.5,21,-87,21.5,-88,16,-84,15,-83.5,10.5,-79.5,9,-77.5,8,-80,7.5,-83,8.5,-86,11.5,-92,14.5,-96,16,-105,20,-106,23,-110,24,-112,29,-114.5,31,-117,32.5,-120.5,34.5,-122.5,37.5,-124.5,42,-124,47,-125,50,-130,54.5,-135,57.5,-140,59.5,-147,60.5,-152,59,-158,57,-164,54.5,-160,58.5,-165,60.5,-165,63],
+  // Greenland
+  [-73,78,-60,82,-35,83.5,-20,82,-18,77,-22,70,-32,68,-40,65,-43,60,-48,61,-52,65,-55,70,-60,76],
+  // Cuba
+  [-85,21.9,-82,23.1,-77.5,21.8,-74.2,20.2,-77.7,19.9,-81.5,22.2],
+  // South America
+  [-80,-1,-80.5,-4.5,-81,-6,-77,-12,-71.5,-17.5,-70.3,-18.5,-70.5,-25,-71.5,-30,-71.5,-37,-73.5,-42,-74.5,-47,-75,-51,-72,-54,-68,-55,-66,-55,-68.5,-52,-69,-50,-67.5,-46.5,-65,-45,-65,-42,-62,-39,-57.5,-38,-57,-36,-54,-34.5,-51,-31,-48.5,-27,-48,-25,-44.5,-23,-41,-22,-39,-17,-39,-13,-37,-11,-35,-8,-35,-5.5,-38,-3.5,-42,-2.7,-44.5,-2.5,-48,-1,-50,0,-51,4,-53.5,5.7,-57,6,-60,8.5,-62,10.5,-65,10,-68,10.5,-71,12,-72,11.5,-75.5,10.5,-77,8.5,-78,7,-77.5,4,-78.8,1.5],
+  // Iceland
+  [-24,65.5,-22,66.4,-16,66.5,-13.5,65,-15,64.3,-18.7,63.4,-22.7,63.8],
+  // Great Britain
+  [-5.7,50,1.4,51.2,1.7,52.7,0,53.5,-0.5,54.5,-2,55.9,-1.8,57.6,-3,58.6,-5,58.6,-6.2,57.5,-5.6,56,-4.8,54.8,-3,54,-4.5,53.3,-4.5,52,-5.3,51.7,-3,51.4],
+  // Ireland
+  [-6,52,-6.2,54,-7.5,55.3,-10,54.2,-10.2,51.6,-8,51.6],
+  // Eurasia
+  [-9.5,37,-9,43,-2,43.5,-1.5,46,-4.5,48,-1,49.5,2,51,4,52,5,53.5,8,54,8.5,57,10.5,57.7,10.5,55,12.5,54.5,14,54,19,54.5,21,57,24,57.5,23.5,59.5,29,60,24,60.3,21.5,61,21,63,25,65,22,66,19,63.5,17.5,61,18.5,59.5,16.5,57,14,55.5,12.5,56.5,11,59,8,58,5.5,58.5,5,62,8,63.5,13,66,16,69,20,70,25,71,30,70,33,69,41,67,44,68.5,54,68.5,60,69.5,68,68.5,70,73,80,73,87,75,100,77,105,78,113,74,123,73,130,71,140,72,150,71,160,70,170,70,180,69,180,65,178,64,173,60,164,60,163,57,160,54,156,51,156,57,160,61,155,59.5,148,59.3,142,59,136,54.5,141,53,140,48,135,43,131,42.5,129.5,40,129,35.5,126.5,34.5,126,37.5,125,39.5,121.5,39,122,40.5,119,39,118,38.5,121,37,122.5,37,119.5,35,121,32,122,30,120,26,117,23.5,113.5,22.2,110,21,109.5,18.5,108,21.5,106.5,20,106,18,108.5,15,109,11.5,106.5,10.5,105,8.7,104.5,10.5,102,12.5,100.5,13.5,99,10.5,100.5,7,103.5,1.3,101,3,98.5,8,98.3,12,97.5,16.5,94.5,16,94,19,92.5,21,91.8,22.5,90.5,22,88.5,21.7,87,21.5,86.5,20,85,19.3,82.5,17,80.3,15.5,80.2,13,79.8,10.3,78,8.5,77,8.2,76.5,9.5,75,12.5,74,15,72.8,19,72.6,21.5,70,21,68.5,23,66.5,25.3,62,25.2,57.5,25.7,56.5,27,54,26.7,51.5,27.8,50,30,48.5,29.5,48,28,50,26,51.5,25,51.6,24,54.5,24.2,56.4,26.2,56.4,24.6,59.8,22.4,58.5,20.5,55.5,17.8,52.2,16,48.7,14,45,12.8,43.5,12.7,42.7,15.5,42.5,16.5,39.2,21.5,38.5,24,35,28,34.5,29.5,34.2,31.3,35,33,35.9,35.9,36.2,36.7,33,36.2,30,36.3,27.3,37,26.3,39.5,28.5,41,29,41.2,31.5,41.1,36,41.6,38.5,41,41.5,41.5,40,43.3,37.5,44.8,39,47,35,45.5,33.5,44.5,32.5,45.5,30.5,46.5,29.5,45.2,28.6,44,27.8,42.5,28,41.5,26.2,40.8,24,40.8,23.7,39.5,22.5,40.3,22.8,37.5,21.6,36.8,21,38.5,19.5,40,19.4,41.8,16,43.5,13.5,45.5,12.3,45.3,13.9,44,16,41.5,18.5,40.2,16.8,38.9,15.8,38,16.3,39.5,15.5,40.1,14,40.8,12.3,41.8,10.5,43,8.8,44.4,7.5,43.8,6,43.1,4.5,43.4,3,43.2,3.2,41.9,0.8,41,-0.3,39.5,0.2,38.7,-0.7,37.6,-2.1,36.7,-4.4,36.7,-5.6,36,-6.3,36.8,-7.4,37.2,-9,37],
+  // Africa
+  [-17,21,-16,24,-13,27.5,-9.8,29.8,-9.5,32.5,-6.8,34,-5.9,35.8,-2,35.1,1,36.5,5,36.8,9.8,37.3,11,36.8,10.5,35,11,33.3,15.2,32.3,19,30.3,20,32,23,32.6,25.3,31.6,29,30.9,32.3,31.3,34.2,31.2,34.9,29.5,33.6,27.8,35.5,23.9,37.4,18.6,38.6,17.8,39.7,15.5,41.2,14.5,43.3,12.5,44.5,10.4,51.1,11.9,51,10.4,49.5,6.8,47.8,4.2,44,0.2,41.6,-1.7,40.2,-2.8,39.2,-4.7,38.8,-6.5,39.4,-8.5,40.5,-10.5,40.5,-15.5,37,-17.5,35.2,-21.3,35.5,-24,32.6,-25.8,32.9,-28.6,31,-29.9,28,-33,25.7,-34,22.5,-34,20,-34.8,18.4,-34,18.2,-31.6,16.5,-28.6,15.2,-27,14.4,-23,13.4,-20.9,11.8,-17.3,12.2,-14.4,13.6,-12,13.2,-9,12.2,-6,12.3,-4.6,11.1,-3.9,9.4,-1,9.8,3,8.5,4.5,5.9,4.3,4.5,6.3,1.9,6.1,-2,4.7,-4,5.2,-7.5,4.4,-9.1,5.4,-11.4,6.8,-13.2,8.9,-14.7,10.6,-16.7,12.4,-17.5,14.7,-16.5,16.2,-16.1,18.1,-16.5,19.6],
+  // Madagascar
+  [49.5,-12,50.5,-15.5,49.5,-17,47.5,-24.8,45.2,-25.5,43.6,-23,44,-17.5,46.3,-15.8,48,-13.5],
+  // Sri Lanka
+  [79.8,8,80.2,9.8,81,8.5,81.9,7,81.6,6.4,80.6,5.9,80,6.8],
+  // Japan
+  [130,31.5,131,34,133,34.5,135,34.5,137,34.7,139.8,35.3,140.8,36.5,141,38.3,142,39.5,141.4,41.4,140,40.5,139.7,39,138.5,37.5,136.8,37.2,136,36,133,35.5,131,34.5,130,33],
+  [140,42,141.5,45.4,145.5,43.3,143.3,42],
+  // Taiwan
+  [120.1,23,121.5,25.3,122,24.8,120.9,22],
+  // Philippines
+  [120,18.5,122.3,18.5,122,16,121.6,14.2,124,13,123.8,12.3,121,13.8,120.6,14.4,119.8,15.8],
+  [122,11,125.5,11.5,125,10,123,9.2,122,10],
+  [122,7,125.5,9.8,126.5,7.5,125.3,5.6,124,6.5],
+  // Indonesia / New Guinea
+  [95.2,5.6,97.5,5.2,100.4,2.2,104.5,-1.5,106,-3.2,105.8,-5.8,104.5,-5.9,102.3,-4,100.3,-1,98.7,1.7,95.4,3],
+  [105.2,-6.8,106,-5.9,108.5,-6.5,111,-6.4,112.6,-6.9,114.6,-7.8,114.4,-8.7,111,-8.2,108,-7.8],
+  [109,1.5,109.6,2,111.2,2.7,113,3.1,115.5,5.3,117,7,119,5,118,4.3,117.8,1.8,119,0.8,117.6,-0.5,116.5,-1.8,116,-3.8,114.5,-4,111.5,-3,110,-2,110,0],
+  [120,1,125,1.5,121.5,-1,123.5,-5.5,120.5,-5.5,119.5,-3],
+  [131,-1,134,-0.9,137.8,-1.5,141,-2.6,145,-4,147.5,-6,150,-10.4,147,-10,143.5,-9,141,-9.2,139,-8.1,137.7,-5.3,135,-4.4,132,-2.8],
+  // Australia
+  [113.5,-22,114,-26.5,115,-30,115,-34,118,-35,123.5,-33.9,126,-32.3,131,-31.5,134.2,-32.6,137.8,-35.6,138.5,-34,140,-37.5,143.5,-38.8,146.3,-39,150,-37.5,150.8,-34.5,153,-31,153.5,-28,153,-25.3,150.8,-22.6,149,-20.5,146.4,-18.5,145.3,-15,143.7,-14,142.5,-10.7,141.5,-13,141.6,-16.5,140.6,-17.6,139,-17,135.7,-15,136.8,-12.2,133,-11.3,130.5,-12.3,129.5,-14.9,126.6,-14,125,-15.5,122.2,-17.5,121,-19.6,117,-20.7],
+  // New Zealand
+  [172.7,-34.4,174.5,-36,178.5,-37.7,177,-39.5,175.2,-41.6,174.5,-41,173.8,-39.2],
+  [172.6,-40.5,174.3,-41.7,173,-43.8,171,-45.9,169,-46.6,166.5,-46,168.4,-44,171.3,-42],
+];
+const WATER = [
+  [-95,59,-92,57,-85,55,-80,56,-77,60,-80,63,-87,64,-94,61],   // Hudson Bay
+  [47,45,53,47,54,41,54,38,50,37,49,40,47.5,42],               // Caspian Sea
+];
+
+function drawMap() {
+  const x = cv.map.getContext('2d');
+  const rng = mulberry32(37);
+  x.fillStyle = COL.black; x.fillRect(0, 0, FW, FH);
+  const view = { lon0: -100, lon1: 140, lat0: -52, lat1: 80 };
+  const proj = (lon, lat) => [(lon - view.lon0) / (view.lon1 - view.lon0) * FW, (view.lat1 - lat) / (view.lat1 - view.lat0) * FH];
+
+  const m = makeCanvas(FW, FH);
+  const mx = m.getContext('2d');
+  const fillPolys = (list) => list.forEach(poly => {
+    mx.beginPath();
+    for (let i = 0; i < poly.length; i += 2) {
+      const [px, py] = proj(poly[i], poly[i + 1]);
+      if (i === 0) mx.moveTo(px, py); else mx.lineTo(px, py);
+    }
+    mx.closePath(); mx.fill();
+  });
+  mx.fillStyle = '#fff';
+  fillPolys(LAND);
+  mx.globalCompositeOperation = 'destination-out';
+  fillPolys(WATER);
+  const data = mx.getImageData(0, 0, FW, FH).data;
+
+  x.strokeStyle = rgba(COL.blue, 0.09);
+  x.lineWidth = 1;
+  for (let lon = -90; lon <= 140; lon += 20) { const [px] = proj(lon, 0); x.beginPath(); x.moveTo(px, 0); x.lineTo(px, FH); x.stroke(); }
+  for (let lat = -40; lat <= 80; lat += 20) { const [, py] = proj(0, lat); x.beginPath(); x.moveTo(0, py); x.lineTo(FW, py); x.stroke(); }
+
+  const step = 9;
+  for (let y = step / 2; y < FH; y += step) {
+    for (let xx = step / 2; xx < FW; xx += step) {
+      if (data[((y | 0) * FW + (xx | 0)) * 4 + 3] > 120) {
+        const r = rng();
+        x.fillStyle = r > 0.975 ? rgba(COL.paper, 0.6) : rgba(COL.blue, 0.38 + r * 0.32);
+        x.beginPath(); x.arc(xx, y, 2.05, 0, Math.PI * 2); x.fill();
+      }
+    }
+  }
+
+  const city = {
+    'NEW YORK': proj(-74, 40.7),
+    'DHAKA':    proj(90.4, 23.8),
+    'MANILA':   proj(121, 14.6),
+    'COLOMBO':  proj(79.9, 6.9),
+    'MACAU':    proj(113.5, 22.2),
+  };
+  const arc = (a, b, lift, dashed) => {
+    const [x0, y0] = city[a], [x1, y1] = city[b];
+    const mx2 = (x0 + x1) / 2, my2 = (y0 + y1) / 2 + lift;
+    x.save();
+    x.strokeStyle = COL.red;
+    x.shadowColor = COL.red;
+    x.shadowBlur = 14;
+    x.lineWidth = 2.4;
+    if (dashed) x.setLineDash([7, 7]);
+    x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(mx2, my2, x1, y1); x.stroke();
+    x.restore();
+  };
+  arc('DHAKA', 'NEW YORK', -330, false);
+  arc('NEW YORK', 'MANILA', 300, false);
+  arc('NEW YORK', 'COLOMBO', 190, true);
+  arc('MANILA', 'MACAU', -40, false);
+
+  x.font = monoFont(15, 'bold');
+  Object.entries(city).forEach(([name, [px, py]]) => {
+    x.fillStyle = COL.red;
+    x.beginPath(); x.arc(px, py, 5, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = rgba(COL.red, 0.6); x.lineWidth = 1.5;
+    x.beginPath(); x.arc(px, py, 12, 0, Math.PI * 2); x.stroke();
+    x.fillStyle = rgba(COL.paper, 0.85);
+    const right = name === 'MANILA' || name === 'MACAU';
+    drawSpaced(x, name, right ? px - 18 : px + 18, py + (name === 'MACAU' ? -12 : 5), 3, right ? 'right' : 'left');
+  });
+
+  x.font = monoFont(16);
+  x.fillStyle = rgba(COL.blue, 0.95);
+  drawSpaced(x, 'FUNDS TRACE  ·  04—05 FEB', 48, 52, 3);
+  x.fillStyle = rgba(COL.paper, 0.5);
+  drawSpaced(x, '35 INSTRUCTIONS  ·  5 RELEASED', FW - 48, FH - 40, 3, 'right');
+}
+
+function drawCounter(p) {
+  const x = cv.counter.getContext('2d');
+  x.fillStyle = COL.black; x.fillRect(0, 0, FW, FH);
+  x.strokeStyle = rgba(COL.blue, 0.07); x.lineWidth = 1;
+  for (let gx = 0; gx < FW; gx += 40) { x.beginPath(); x.moveTo(gx + 0.5, 0); x.lineTo(gx + 0.5, FH); x.stroke(); }
+  for (let gy = 0; gy < FH; gy += 40) { x.beginPath(); x.moveTo(0, gy + 0.5); x.lineTo(FW, gy + 0.5); x.stroke(); }
+
+  x.font = monoFont(18);
+  x.fillStyle = rgba(COL.blue, 0.95);
+  drawSpaced(x, 'OUTGOING TRANSFER  ·  SWIFT MT103  ·  VALUE 04 FEB 2016', FW / 2, 222, 3, 'center');
+
+  const fs = 128;
+  x.font = logoFont(fs);
+  const s = CONFIG.text.amount;
+  const digitW = Math.max(...'0123456789'.split('').map(d => x.measureText(d).width));
+  const track = fs * 0.02;
+  const cw = [...s].map(ch => (/\d/.test(ch) ? digitW : x.measureText(ch).width));
+  const total = cw.reduce((a, b) => a + b, 0) + track * (s.length - 1);
+  let cx = FW / 2 - total / 2;
+  const base = FH / 2 + fs * 0.36;
+  const lineH = fs * 1.02;
+  let di = 0;
+  [...s].forEach((ch, i) => {
+    x.fillStyle = COL.paper;
+    if (/\d/.test(ch)) {
+      const d = +ch;
+      const pr = clamp((p - di * 0.035) / 0.62);
+      const roll = (1 - ease.outCubic(pr)) * (7 + ((di * 7) % 5));
+      const v = d + roll;
+      const b = Math.floor(v), frac = v - b;
+      x.save();
+      x.beginPath(); x.rect(cx - 4, base - fs * 0.86, cw[i] + 8, fs * 0.98); x.clip();
+      x.fillText(String(((b % 10) + 10) % 10), cx, base + frac * lineH);
+      x.fillText(String((((b + 1) % 10) + 10) % 10), cx, base + frac * lineH - lineH);
+      x.restore();
+      di++;
+    } else {
+      x.fillText(ch, cx, base);
+    }
+    cx += cw[i] + track;
+  });
+
+  x.fillStyle = rgba(COL.paper, 0.25);
+  x.fillRect(FW / 2 - total / 2, base + 46, total, 1);
+  x.font = monoFont(19, 'bold');
+  x.fillStyle = COL.red;
+  drawSpaced(x, 'STATUS: RELEASED', FW / 2 - total / 2, base + 92, 5);
+  x.font = monoFont(19);
+  x.fillStyle = rgba(COL.paper, 0.55);
+  const bw = drawSpaced(x, 'BENEFICIARY:', FW / 2 + total / 2 - 330, base + 92, 3);
+  x.fillStyle = '#000';
+  x.fillRect(FW / 2 + total / 2 - 330 + bw + 14, base + 74, 330 - bw - 14, 24);
+  x.strokeStyle = rgba(COL.paper, 0.2);
+  x.strokeRect(FW / 2 + total / 2 - 330 + bw + 14, base + 74, 330 - bw - 14, 24);
+}
+
+function drawStamp() {
+  const x = cv.stamp.getContext('2d');
+  const rng = mulberry32(53);
+  x.clearRect(0, 0, FW, FH);
+  x.save();
+  x.translate(FW / 2, FH / 2);
+  x.rotate(-0.21);
+  x.strokeStyle = COL.red;
+  x.fillStyle = COL.red;
+  x.lineWidth = 11;
+  x.strokeRect(-400, -150, 800, 300);
+  x.lineWidth = 3.5;
+  x.strokeRect(-380, -130, 760, 260);
+  x.font = logoFont(168);
+  x.textBaseline = 'middle';
+  drawSpaced(x, 'CASE FILE', 0, -18, 10, 'center');
+  x.font = monoFont(28, 'bold');
+  drawSpaced(x, 'No. 16-0204  ·  UNSOLVED', 0, 88, 7, 'center');
+  x.restore();
+
+  x.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 5200; i++) {
+    x.globalAlpha = 0.25 + rng() * 0.75;
+    x.beginPath();
+    x.arc(FW * 0.15 + rng() * FW * 0.7, FH * 0.1 + rng() * FH * 0.8, 0.4 + rng() * 2.4, 0, Math.PI * 2);
+    x.fill();
+  }
+  for (let i = 0; i < 26; i++) {
+    x.globalAlpha = 0.15 + rng() * 0.35;
+    x.lineWidth = 1 + rng() * 3;
+    x.beginPath();
+    const sx = FW * 0.2 + rng() * FW * 0.6, sy = FH * 0.2 + rng() * FH * 0.6;
+    x.moveTo(sx, sy); x.lineTo(sx + 40 + rng() * 160, sy + (rng() - 0.5) * 30);
+    x.stroke();
+  }
+  const g = x.createLinearGradient(FW * 0.2, 0, FW * 0.85, 0);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.45)');
+  x.globalAlpha = 1;
+  x.fillStyle = g;
+  x.fillRect(0, 0, FW, FH);
+  x.globalCompositeOperation = 'source-over';
+}
+
+/* =====================================================================
+   Logo layout (channels: R = FICTION, G = UN, B = tagline + cursor)
+   ===================================================================== */
+const LW = 1920, LH = 1080;
+const layout = (() => {
+  const x = cv.logo.getContext('2d');
+  const C = CONFIG.logo;
+  const word = CONFIG.text.prefix + CONFIG.text.word;
+  const nP = CONFIG.text.prefix.length;
+  x.font = logoFont(C.size);
+  const track = C.size * C.tracking;
+  const widths = [...word].map(ch => x.measureText(ch).width);
+  const total = widths.reduce((a, b) => a + b, 0) + track * (word.length - 1);
+  const pos = [];
+  let cx = LW / 2 - total / 2;
+  widths.forEach(w => { pos.push(cx); cx += w + track; });
+  const m = x.measureText(word);
+  const asc = m.actualBoundingBoxAscent || C.size * 0.79;
+  const desc = m.actualBoundingBoxDescent || 0;
+  const centerY = LH * C.centerY;
+  const baseline = centerY + (asc - desc) / 2;
+  const last = word.length - 1;
+  const fx0 = pos[nP], fx1 = pos[last] + widths[last];
+  const ux0 = pos[0], ux1 = pos[nP - 1] + widths[nP - 1];
+
+  x.font = monoFont(C.tagSize, 'bold');
+  const tag = [...CONFIG.text.tagline];
+  const tagSpacing = C.tagSize * C.tagSpacing;
+  const tw = tag.map(ch => x.measureText(ch).width);
+  const tagTotal = tw.reduce((a, b) => a + b, 0) + tagSpacing * (tag.length - 1);
+  const tagPos = [];
+  let tx = LW / 2 - tagTotal / 2;
+  tw.forEach(w => { tagPos.push(tx); tx += w + tagSpacing; });
+  tagPos.push(tx);
+  const tagBase = baseline + desc + C.tagGap;
+
+  return {
+    word, nP, widths, pos, baseline, track, tag, tagPos, tagBase,
+    shift: ((fx0 - ux0) / 2) / LW,
+    fCenter: [((fx0 + fx1) / 2) / LW, 1 - centerY / LH],
+    uCenter: [((ux0 + ux1) / 2) / LW, 1 - centerY / LH],
+    uSplit: nP > 1 ? (pos[1] - track / 2) / LW : 1,
+    redBox: [(fx0 - 14) / LW, (fx1 + 14) / LW, 1 - (centerY + 4) / LH, 3.6 / LH],
+  };
+})();
+
+let logoKey = '';
+function drawLogo(unCount, tagCount, cursorOn) {
+  const key = `${unCount}|${tagCount}|${cursorOn ? 1 : 0}`;
+  if (key === logoKey) return false;
+  logoKey = key;
+  const x = cv.logo.getContext('2d');
+  const C = CONFIG.logo;
+  x.globalCompositeOperation = 'source-over';
+  x.fillStyle = '#000';
+  x.fillRect(0, 0, LW, LH);
+  x.globalCompositeOperation = 'lighter';
+  x.textBaseline = 'alphabetic';
+  x.font = logoFont(C.size);
+  [...layout.word].forEach((ch, i) => {
+    if (i < layout.nP) {
+      if (i >= unCount) return;
+      x.fillStyle = 'rgb(0,255,0)';
+    } else {
+      x.fillStyle = 'rgb(255,0,0)';
+    }
+    x.fillText(ch, layout.pos[i], layout.baseline);
+  });
+  x.font = monoFont(C.tagSize, 'bold');
+  x.fillStyle = 'rgb(0,0,255)';
+  for (let i = 0; i < tagCount; i++) x.fillText(layout.tag[i], layout.tagPos[i], layout.tagBase);
+  if (cursorOn) {
+    const cxp = layout.tagPos[Math.min(tagCount, layout.tag.length)] + (tagCount > 0 ? 4 : 0);
+    x.fillRect(cxp, layout.tagBase - C.tagSize * 0.78, C.tagSize * 0.56, C.tagSize * 0.92);
+  }
+  x.globalCompositeOperation = 'source-over';
+  return true;
+}
+
+const tagTimes = (() => {
+  const rng = mulberry32(71);
+  const n = layout.tag.length;
+  return layout.tag.map((_, i) => T.tagStart + (i / n) * (T.tagEnd - T.tagStart) + (i ? (rng() - 0.5) * 0.008 : 0));
+})();
+
+/* =====================================================================
+   WebGL
+   ===================================================================== */
+const VERT = `#version 300 es
+out vec2 vUv;
+void main() {
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  vUv = p;
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+const COMMON = `
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+vec2 hash22(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.xx + p3.yz) * p3.zy);
+}
+float vnoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float a = hash12(i), b = hash12(i + vec2(1.0, 0.0));
+  float c = hash12(i + vec2(0.0, 1.0)), d = hash12(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+float fbm(vec2 p) {
+  float s = 0.0, a = 0.5;
+  for (int i = 0; i < 5; i++) { s += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; }
+  return s;
+}
+mat2 rot2(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
+float easeOutExpo(float x) { return x >= 1.0 ? 1.0 : 1.0 - pow(2.0, -10.0 * x); }
+`;
+
+const SCENE_FRAG = `#version 300 es
+precision highp float;
+precision highp int;
+in vec2 vUv;
+out vec4 outColor;
+
+uniform vec2 uRes;
+uniform float uTime;
+uniform vec3 cBlack, cGraphite, cBlue, cPaper, cRed;
+uniform sampler2D uF0, uF1, uF2, uF3, uF4, uStamp, uLogo;
+
+uniform float uDust;
+uniform vec3 uCRT;
+uniform int uFragIdx;
+uniform float uFragBright, uFragAge, uFragRot, uFragScale, uFragReveal;
+uniform vec2 uFragOff;
+uniform float uWall;
+uniform float uLogoOn, uFScale, uFShift, uFAlpha, uUSplit, uRedP, uSweep, uTagAlpha, uLogoLight;
+uniform vec2 uFCenter, uUCenter, uUDt;
+uniform vec4 uRedBox;
+
+${COMMON}
+
+vec3 dustLayer(vec2 uv, float t) {
+  float A = uRes.x / uRes.y;
+  vec2 p = uv * vec2(A, 1.0);
+  vec2 origin = vec2(0.30 * A, 1.25);
+  vec2 dir = normalize(vec2(0.42, -1.0));
+  vec2 rel = p - origin;
+  float along = dot(rel, dir);
+  float perp = abs(dot(rel, vec2(-dir.y, dir.x)));
+  float spread = 0.10 + along * 0.32;
+  float beam = smoothstep(spread, spread * 0.1, perp) * smoothstep(0.0, 0.6, along);
+  float haze = fbm(p * 2.0 + vec2(t * 0.035, -t * 0.025));
+  float breathe = 0.7 + 0.3 * sin(t * 1.6);
+  float parts = 0.0;
+  for (int L = 0; L < 3; L++) {
+    float fl = float(L);
+    float sc = 18.0 + fl * 15.0;
+    vec2 g = p * sc + vec2(t * (0.25 + 0.15 * fl), t * (0.12 - 0.1 * fl)) + fl * 7.3;
+    g += vec2(sin(t * 0.7 + fl), cos(t * 0.5 + fl * 2.0)) * 0.6;
+    vec2 id = floor(g);
+    vec2 f = fract(g) - 0.5;
+    vec2 rnd = hash22(id + fl * 13.1);
+    float on = step(0.88, rnd.x);
+    vec2 off = (hash22(id * 1.7 + 3.3) - 0.5) * 0.7;
+    float d = length(f - off);
+    float tw = 0.5 + 0.5 * sin(t * (2.0 + rnd.y * 3.0) + rnd.x * 40.0);
+    parts += on * smoothstep(0.085, 0.0, d) * (0.35 + 0.65 * rnd.y) * tw;
+  }
+  vec3 tint = mix(cBlue, cPaper, 0.55);
+  float v = haze * 0.045 * breathe + beam * (0.03 + haze * 0.05) + parts * (0.035 + beam * 0.7);
+  return tint * v;
+}
+
+vec3 crtLayer(vec2 uv) {
+  float y = abs(uv.y - 0.5);
+  float x = abs(uv.x - 0.5);
+  float th = uCRT.z;
+  float core = exp(-(y * y) / (th * th)) * smoothstep(uCRT.y, uCRT.y - 0.03, x);
+  float halo = exp(-(y * y) / (th * th * 90.0)) * smoothstep(uCRT.y + 0.15, 0.0, x) * 0.22;
+  float dotGlow = exp(-(x * x + y * y * 3.0) * 60.0) * 0.25;
+  vec3 c = mix(cPaper, vec3(0.75, 0.88, 1.0), 0.35);
+  return c * (core * 1.4 + halo + dotGlow) * uCRT.x;
+}
+
+vec3 fingerprint(vec2 fuv, float age) {
+  vec2 q = (fuv - vec2(0.36, 0.5)) * vec2(16.0 / 9.0, 1.0) / 0.36;
+  q.x *= 1.28;
+  float r = length(q);
+  float edge = 1.0 + (fbm(q * 3.0) - 0.5) * 0.2;
+  float mask = smoothstep(edge, edge - 0.1, r);
+  if (mask <= 0.0) return vec3(0.0);
+  vec2 w = q + (vec2(fbm(q * 1.7 + 3.1), fbm(q * 1.7 + 7.7)) - 0.5) * 0.35;
+  float ang = atan(w.y, w.x);
+  float rr = length(w * vec2(1.0, 1.12));
+  float field = rr * 33.0 + 1.1 * sin(ang + rr * 2.5) + w.y * 4.5 * smoothstep(0.25, 1.0, rr);
+  float v = abs(fract(field) - 0.5) * 2.0;
+  float ridge = smoothstep(0.50, 0.24, v);
+  ridge *= smoothstep(0.16, 0.38, vnoise(q * 46.0));
+  ridge *= 0.55 + 0.45 * fbm(q * 6.0);
+  ridge *= smoothstep(1.0, 0.55, r) * 0.6 + 0.4;
+  float scanPos = 0.84 - fract(age * 1.4) * 0.68;
+  float scan = exp(-pow((fuv.y - scanPos) * 70.0, 2.0));
+  return (cPaper * 0.62 * ridge + cBlue * scan * 0.3 + cBlue * ridge * scan * 1.1) * mask;
+}
+
+vec3 fragColor(int idx, vec2 fuv, float age) {
+  if (fuv.x < 0.0 || fuv.y < 0.0 || fuv.x > 1.0 || fuv.y > 1.0) return vec3(0.0);
+  vec3 base = cGraphite;
+  vec4 tx = vec4(0.0);
+  if (idx == 0) {
+    tx = textureLod(uF0, fuv, 0.0);
+  } else if (idx == 1) {
+    tx = textureLod(uF1, fuv, 0.0);
+  } else if (idx == 2) {
+    base = cGraphite * 0.8 + fingerprint(fuv, age);
+    tx = textureLod(uF2, fuv, 0.0);
+  } else if (idx == 3) {
+    tx = textureLod(uF3, fuv, 0.0);
+  } else if (idx == 4) {
+    tx = textureLod(uF4, fuv, 0.0);
+  } else {
+    vec4 doc = textureLod(uF1, (fuv - 0.5) * 0.9 + vec2(0.5, 0.46), 0.0);
+    base = doc.rgb * 0.38;
+    float k = easeOutExpo(clamp(age / 0.10, 0.0, 1.0));
+    float s = 1.0 + 0.9 * (1.0 - k);
+    vec2 su = rot2(-0.08 * (1.0 - k)) * ((fuv - 0.5) * vec2(16.0 / 9.0, 1.0)) / s;
+    su.x /= 16.0 / 9.0;
+    su += 0.5;
+    tx = textureLod(uStamp, su, 0.0) * clamp(age / 0.03, 0.0, 1.0);
+    base *= 1.0 - 0.35 * (1.0 - k);
+  }
+  return base * (1.0 - tx.a) + tx.rgb;
+}
+
+vec3 wallLayer(vec2 uv) {
+  float A = uRes.x / uRes.y;
+  vec2 p = (uv - 0.5) * vec2(A, 1.0);
+  vec3 col = vec3(0.0);
+  const float tw = 0.56, th = 0.315, gap = 0.03;
+  for (int k = 0; k < 6; k++) {
+    float cx = (float(k % 3) - 1.0) * (tw + gap);
+    float cy = (k < 3 ? 0.5 : -0.5) * (th + gap);
+    float d = hash12(vec2(float(k), 3.7)) * 0.22;
+    float pk = clamp((uWall - d) / (1.0 - d), 0.0, 1.0);
+    float s = max(1.0 - pk * pk * pk, 0.0001);
+    float ang = pk * pk * (1.3 + 0.45 * float(k));
+    vec2 q = rot2(-ang) * p;
+    vec2 local = (q - vec2(cx, cy) * s) / s;
+    if (abs(local.x) < tw * 0.5 && abs(local.y) < th * 0.5) {
+      vec2 fuv = local / vec2(tw, th) + 0.5;
+      vec3 fc = fragColor(k, fuv, 0.6) * (1.0 - pk * 0.25);
+      float e = min(min(fuv.x, 1.0 - fuv.x) * A, min(fuv.y, 1.0 - fuv.y)) * th;
+      fc = mix(cPaper * 0.45, fc, smoothstep(0.0, 0.0025, e));
+      col = fc;
+    }
+  }
+  float r = length(p);
+  float core = exp(-r * r / (0.0004 + 0.02 * (1.0 - uWall))) * smoothstep(0.55, 1.0, uWall);
+  col += mix(cPaper, vec3(0.8, 0.9, 1.0), 0.3) * core * 1.2;
+  return col;
+}
+
+vec3 logoLayer(vec2 uv) {
+  float A = uRes.x / uRes.y;
+  vec2 px = vec2(1.0 / 1920.0, 1.0 / 1080.0);
+
+  float spot = exp(-pow((uv.x - uSweep) * A / 0.40, 2.0) - pow((uv.y - 0.52) / 0.42, 2.0));
+  float diag = uv.x + (uv.y - 0.5) * 0.30;
+  float glint = exp(-pow((diag - uSweep) / 0.02, 2.0));
+
+  float fib = fbm(vec2(uv.x * 220.0, uv.y * 30.0)) * 0.55 + fbm(vec2(uv.x * 40.0, uv.y * 260.0)) * 0.45;
+  float blot = fbm(uv * vec2(5.0, 3.0) + 3.0);
+  vec3 bg = mix(cBlack, cGraphite * 1.3, clamp(fib * 0.8 + blot * 0.3, 0.0, 1.0));
+  bg *= 0.32 + 1.9 * spot;
+  bg += cBlue * 0.02 * smoothstep(0.9, 0.0, length((uv - vec2(0.5, 0.48)) * vec2(A, 1.0)));
+
+  float light = uLogoLight + 0.45 * spot + 0.32 * glint;
+
+  vec2 cDisp = uFCenter - vec2(uFShift, 0.0);
+  vec2 uvF = (uv - cDisp) / uFScale + uFCenter;
+  float mF  = textureLod(uLogo, uvF, 0.0).r;
+  float mFl = textureLod(uLogo, uvF + vec2(-2.0, 3.0) * px, 0.0).r;
+  float mFd = textureLod(uLogo, uvF + vec2(-6.0, 8.0) * px, 0.0).r;
+  float nHi = vnoise(uvF * 1100.0);
+  float nMid = fbm(uvF * 90.0);
+  float aF = smoothstep(0.30, 0.70, mF + (nHi - 0.5) * 0.30);
+  aF *= 0.86 + 0.14 * smoothstep(0.25, 0.6, nMid);
+  float fiberF = fbm(vec2(uvF.x * 1600.0, uvF.y * 120.0));
+  float innerF = mF * (1.0 - mFl);
+  vec3 fCol = cPaper * (0.86 + 0.14 * fiberF) * (1.0 - 0.6 * innerF);
+
+  vec3 col = bg;
+  col *= 1.0 - 0.6 * mFd * uFAlpha;
+  col = mix(col, fCol * light, aF * uFAlpha);
+
+  float isFirst = step(uv.x, uUSplit);
+  float ldt = mix(uUDt.y, uUDt.x, isFirst);
+  float strike = ldt >= 0.0 ? 1.0 - easeOutExpo(clamp(ldt / 0.10, 0.0, 1.0)) : 0.0;
+  vec2 uvU = (uv - uUCenter) / (1.0 + 0.10 * strike) + uUCenter - vec2(0.0, 0.012 * strike);
+  float mU  = textureLod(uLogo, uvU, 0.0).g;
+  float mUl = textureLod(uLogo, uvU + vec2(-2.0, 3.0) * px, 0.0).g;
+  float mUd = textureLod(uLogo, uvU + vec2(-6.0, 8.0) * px, 0.0).g;
+  float aU = smoothstep(0.30, 0.70, mU + (vnoise(uvU * 1100.0) - 0.5) * 0.25);
+  float gU = 0.0;
+  for (int i = 0; i < 8; i++) {
+    float a = float(i) * 0.7853982;
+    vec2 o = vec2(cos(a), sin(a));
+    gU += textureLod(uLogo, uvU + o * px * 9.0, 0.0).g;
+    gU += textureLod(uLogo, uvU + o * px * 24.0, 0.0).g * 0.6;
+  }
+  gU /= 12.8;
+  vec3 uCol = cRed * (0.9 + 0.2 * fbm(uvU * 120.0)) * (1.0 - 0.55 * mU * (1.0 - mUl));
+  col *= 1.0 - 0.6 * mUd;
+  col += cRed * gU * 0.30 * (1.0 + 2.5 * strike) * (1.0 - aU);
+  col = mix(col, uCol * (light + 1.4 * strike), aU);
+
+  if (uRedP > 0.0) {
+    float x0 = uRedBox.x;
+    float x1 = mix(uRedBox.x, uRedBox.y, uRedP);
+    float inX = smoothstep(x0 - 0.0008, x0 + 0.0008, uv.x) * (1.0 - smoothstep(x1 - 0.0008, x1 + 0.0008, uv.x));
+    float dy = abs(uv.y - uRedBox.z);
+    float core = (1.0 - smoothstep(uRedBox.w * 0.7, uRedBox.w * 1.3, dy)) * inX;
+    float glow = exp(-dy * dy / (uRedBox.w * uRedBox.w * 25.0)) * inX;
+    float tip = exp(-pow((uv.x - x1) * A / 0.006, 2.0) - pow(dy / 0.005, 2.0)) * step(uv.x, x1 + 0.02);
+    col = mix(col, cRed * 1.25, core);
+    col += cRed * glow * 0.35 + mix(cRed, cPaper, 0.6) * tip * 0.6 * (1.0 - uRedP * 0.6);
+  }
+
+  float mT = textureLod(uLogo, uv, 0.0).b;
+  col = mix(col, cPaper * 0.74 * (0.92 + 0.3 * spot), mT * uTagAlpha);
+  return col;
+}
+
+void main() {
+  vec2 uv = vUv;
+  vec3 dust = dustLayer(uv, uTime);
+  vec3 col = dust * uDust;
+  if (uCRT.x > 0.0) col += crtLayer(uv);
+  if (uFragIdx >= 0) {
+    float A = uRes.x / uRes.y;
+    vec2 p = (uv - 0.5) * vec2(A, 1.0);
+    p = rot2(uFragRot) * p / uFragScale + uFragOff;
+    vec2 fuv = p / vec2(A, 1.0) + 0.5;
+    vec3 fc = fragColor(uFragIdx, fuv, uFragAge);
+    float reveal = 1.0 - smoothstep(uFragReveal * 0.5 - 0.004, uFragReveal * 0.5, abs(uv.y - 0.5));
+    float seam = exp(-pow((abs(uv.y - 0.5) - uFragReveal * 0.5) / 0.004, 2.0)) * (1.0 - step(0.999, uFragReveal));
+    col = mix(col, fc * uFragBright + dust * 0.3, reveal) + cPaper * seam * 0.8;
+  }
+  if (uWall >= 0.0) col = wallLayer(uv) + dust * 0.2;
+  if (uLogoOn > 0.0) col = logoLayer(uv) + dust * uDust;
+  outColor = vec4(col, 1.0);
+}`;
+
+const POST_FRAG = `#version 300 es
+precision highp float;
+in vec2 vUv;
+out vec4 outColor;
+
+uniform sampler2D uScene;
+uniform vec2 uRes;
+uniform float uTime, uZoom, uRGB, uGlitch, uSeed, uSlices, uSliceAll, uRadial, uLens, uGrain, uExposure, uBlack, uShockR, uShockS;
+uniform vec2 uShake;
+
+${COMMON}
+
+vec3 sampleRGB(vec2 uv, vec2 off) {
+  float m = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
+  float r = textureLod(uScene, uv + off, 0.0).r;
+  float g = textureLod(uScene, uv, 0.0).g;
+  float b = textureLod(uScene, uv - off, 0.0).b;
+  return vec3(r, g, b) * m;
+}
+
+void main() {
+  float A = uRes.x / uRes.y;
+  vec2 c = vUv - 0.5;
+
+  if (uGlitch > 0.0) {
+    float id = floor((vUv.y + hash12(vec2(uSeed, 1.3)) * 0.25) * uSlices);
+    float h = hash12(vec2(id, uSeed));
+    float dir = mod(id, 2.0) < 1.0 ? 1.0 : -1.0;
+    float amt = uSliceAll > 0.5 ? dir * (0.35 + 0.65 * h) : (h > 0.55 ? (h - 0.775) * 4.0 : 0.0);
+    c.x += amt * uGlitch * 0.09;
+  }
+
+  c = c / uZoom + uShake;
+  vec2 ca = c * vec2(A, 1.0);
+  float r2 = dot(ca, ca);
+  c *= 1.0 + uLens * r2 * 0.6;
+
+  if (uShockS > 0.0) {
+    ca = c * vec2(A, 1.0);
+    float d = length(ca);
+    float x = d - uShockR;
+    float prof = x * exp(-x * x * 180.0);
+    c -= (ca / max(d, 1e-4)) / vec2(A, 1.0) * prof * uShockS * 6.0;
+  }
+
+  vec2 uv = c + 0.5;
+  float ab = 0.0016 + uRGB * 0.010;
+  vec2 off = c * ab * 1.6 + vec2(uRGB * 0.004, 0.0);
+
+  vec3 col;
+  if (uRadial > 0.002) {
+    col = vec3(0.0);
+    float wsum = 0.0;
+    for (int i = 0; i < 24; i++) {
+      float f = float(i) / 23.0;
+      float s = 1.0 - uRadial * f;
+      float w = 1.0 - f * 0.6;
+      col += sampleRGB(0.5 + (uv - 0.5) * s, off * s) * w;
+      wsum += w;
+    }
+    col /= wsum;
+  } else {
+    col = sampleRGB(uv, off);
+  }
+
+  col *= uExposure;
+  col = col / (1.0 + col * 0.12);
+
+  vec2 vc = (vUv - 0.5) * vec2(A, 1.0);
+  float vig = smoothstep(1.25, 0.2, length(vc * vec2(0.85, 1.0)));
+  col *= mix(0.5, 1.0, vig);
+
+  col *= 0.965 + 0.035 * sin(vUv.y * uRes.y * 3.14159265);
+
+  float g = hash12(floor(gl_FragCoord.xy / 1.5) + fract(uTime * 37.0) * vec2(113.1, 71.7)) - 0.5;
+  float lum = dot(col, vec3(0.299, 0.587, 0.114));
+  col += g * uGrain * (0.4 + 0.6 * (1.0 - clamp(lum, 0.0, 1.0)));
+
+  col = max(col, 0.0) * uBlack;
+  outColor = vec4(col, 1.0);
+}`;
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+function program(fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const loc = {};
+  const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) {
+    const info = gl.getActiveUniform(p, i);
+    loc[info.name] = gl.getUniformLocation(p, info.name);
+  }
+  return { p, loc };
+}
+
+let sceneProg, postProg;
+try {
+  sceneProg = program(SCENE_FRAG);
+  postProg = program(POST_FRAG);
+} catch (e) {
+  showFallback('SHADER ERROR', String(e.message || e));
+  console.error(e);
+  return;
+}
+
+const vao = gl.createVertexArray();
+
+function createTexture(src) {
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  if (src) uploadTexture(t, src);
+  return t;
+}
+function uploadTexture(t, src) {
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+}
+
+drawLedger();
+drawDocument();
+drawPrintOverlay();
+drawMap();
+drawCounter(0);
+drawStamp();
+drawLogo(0, 0, false);
+
+const tex = {
+  f0: createTexture(cv.ledger),
+  f1: createTexture(cv.doc),
+  f2: createTexture(cv.print),
+  f3: createTexture(cv.map),
+  f4: createTexture(cv.counter),
+  stamp: createTexture(cv.stamp),
+  logo: createTexture(cv.logo),
+};
+
+let fbo = null, fboTex = null, fbW = 0, fbH = 0;
+function resize() {
+  const rect = stage.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, CONFIG.render.maxPixelRatio);
+  let w = Math.max(2, Math.round(rect.width * dpr));
+  let h = Math.max(2, Math.round(rect.height * dpr));
+  if (w > CONFIG.render.maxWidth) { h = Math.round(h * CONFIG.render.maxWidth / w); w = CONFIG.render.maxWidth; }
+  if (w === fbW && h === fbH) return;
+  canvas.width = w; canvas.height = h;
+  fbW = w; fbH = h;
+  if (fboTex) gl.deleteTexture(fboTex);
+  if (fbo) gl.deleteFramebuffer(fbo);
+  fboTex = createTexture(null);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  fbo = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fboTex, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* =====================================================================
+   Timeline: scene functions return the state for time t
+   ===================================================================== */
+const hitRandom = T.hits.map((_, i) => { const r = mulberry32(100 + i); return [r(), r(), r()]; });
+
+const impulses = [
+  ...T.hits.map(t => ({ t, amp: 0.0035, decay: 28 })),
+  { t: T.logoStart, amp: 0.017, decay: 6 },
+  ...T.unTimes.map(t => ({ t, amp: 0.0035, decay: 30 })),
+];
+function shakeAt(t) {
+  let sx = 0, sy = 0;
+  impulses.forEach((imp, i) => {
+    const dt = t - imp.t;
+    if (dt < 0 || dt > 1.6) return;
+    const e = imp.amp * Math.exp(-dt * imp.decay);
+    sx += e * (Math.sin(t * 97.3 + i * 1.7) + 0.5 * Math.sin(t * 211.1 + i));
+    sy += e * (Math.cos(t * 83.7 + i * 2.3) + 0.5 * Math.sin(t * 173.3 + i * 0.7));
+  });
+  return [sx, sy];
+}
+
+function sceneDarkness(t, S) {
+  S.dust = t < T.evidenceStart ? ease.outCubic(clamp(t / T.evidenceStart)) : 0.8;
+  if (t < 0.28 || t > 0.86) return;
+  const flick = [[0.28, 0.31, 0.9], [0.34, 0.36, 0.45], [0.40, 0.86, 1.0]];
+  let on = 0;
+  for (const [a, b, v] of flick) if (t >= a && t < b) on = v;
+  if (t >= 0.40 && t < 0.80) on *= 0.93 + 0.07 * Math.sin(t * 90);
+  const len = 0.02 + 0.46 * ease.outExpo(clamp((t - 0.28) / 0.4));
+  let th = 0.0016;
+  if (t >= T.evidenceStart) {
+    const k = clamp((t - T.evidenceStart) / 0.06);
+    on *= 1 - k;
+    th += 0.02 * ease.outExpo(k);
+  }
+  S.crt = [on * 1.3, len, th];
+}
+
+function sceneEvidence(t, S) {
+  let hi = -1;
+  for (let i = 0; i < T.hits.length; i++) if (t >= T.hits[i]) hi = i;
+  if (hi < 0) return;
+  const age = t - T.hits[hi];
+  const [r1, r2, r3] = hitRandom[hi];
+  S.fragIdx = T.hitFrags[hi];
+  S.fragAge = age;
+  S.fragBright = age < 0.07 ? 1 : lerp(1, 0.32, ease.outCubic(clamp((age - 0.07) / 0.14)));
+  S.fragRot = (r1 - 0.5) * 0.05;
+  S.fragOff = [(r2 - 0.5) * 0.05, (r3 - 0.5) * 0.035];
+  S.fragScale = 1.05 + age * 0.12 + 0.07 * Math.exp(-age * 30);
+  S.fragReveal = hi === 0 ? ease.outExpo(clamp(age / 0.07)) : 1;
+  S.exposure += 0.45 * Math.exp(-age * 45);
+  S.grain += 0.05 * Math.exp(-age * 20);
+  S.rgb += Math.exp(-age * 30);
+  if (age < 0.045) { S.glitch = 0.4; S.slices = 10; S.sliceAll = 0; S.seed = hi * 7 + 1; }
+  if (S.fragIdx === 4) S.counterP = age / 0.16;
+}
+
+function sceneCollapse(t, S) {
+  const p = clamp((t - T.collapseStart) / (T.blackStart - T.collapseStart));
+  S.wall = p;
+  S.counterP = 3;
+  S.radial = 0.65 * ease.inCubic(p);
+  S.lens = 0.9 * ease.inCubic(p);
+  S.rgb += 0.7 * p;
+  S.exposure += 0.35 * Math.exp(-(t - T.collapseStart) * 30);
+}
+
+function sceneLogo(t, S) {
+  const dt = t - T.logoStart;
+  S.logoOn = 1;
+  S.dust = 0.45;
+  S.fScale = 1 + 0.30 * (1 - ease.outExpo(clamp(dt / 0.16)));
+  S.fAlpha = clamp(dt / 0.025);
+  S.fShift = layout.shift * (1 - ease.outExpo(clamp((t - T.fictionSlide) / 0.34)));
+  S.uDt = [t - T.unTimes[0], t - (T.unTimes[1] ?? T.unTimes[0])];
+  const grow = ease.outExpo(clamp((t - T.redStart) / 0.14));
+  const back = ease.inCubic(clamp((t - T.redRetract) / 0.22));
+  S.redP = t < T.redStart ? 0 : grow * (1 - back);
+  S.sweep = -0.3 + 1.6 * ease.inOutCubic(clamp((t - T.sweepStart) / (T.sweepEnd - T.sweepStart)));
+  S.exposure += 0.9 * Math.exp(-dt * 9) + 0.12 * Math.exp(-Math.max(0, t - T.redStart) * 20) * (t >= T.redStart ? 1 : 0);
+  S.grain += 0.22 * Math.exp(-dt * 5);
+  S.rgb += 0.8 * Math.exp(-dt * 10);
+  for (const ut of T.unTimes) if (t >= ut) S.rgb += 0.5 * Math.exp(-(t - ut) * 30);
+  if (dt < 0.9) { S.shockR = dt * 1.25; S.shockS = 0.03 * Math.exp(-dt * 4.5); }
+  S.unCount = T.unTimes.filter(x => t >= x).length;
+  S.tagCount = tagTimes.filter(x => t >= x).length;
+  if (t < T.tagStart) S.cursor = false;
+  else if (S.tagCount < layout.tag.length) S.cursor = true;
+  else S.cursor = Math.floor((t - T.tagEnd) / 0.26) % 2 === 0;
+}
+
+function sceneExit(t, S) {
+  const p = clamp((t - T.exitStart) / (T.exitEnd - T.exitStart));
+  S.glitch = 0.2 + 0.8 * ease.inCubic(p);
+  S.slices = 4;
+  S.sliceAll = 1;
+  S.seed = Math.floor(t * 24) + 11;
+  S.rgb += 0.25 + 1.1 * p;
+  S.exposure *= 1 + 0.15 * Math.sin(t * 160) * p;
+}
+
+function frameState(t) {
+  const S = {
+    black: 1, dust: 0, crt: [0, 0, 0],
+    fragIdx: -1, fragBright: 0, fragAge: 0, fragRot: 0, fragScale: 1, fragReveal: 1, fragOff: [0, 0],
+    wall: -1, counterP: -1,
+    logoOn: 0, fScale: 1, fShift: 0, fAlpha: 0, uDt: [-1, -1], redP: 0, sweep: -1, tagAlpha: 1, logoLight: 0.84,
+    unCount: 0, tagCount: 0, cursor: false,
+    zoom: 1 + 0.035 * ease.inOutSine(clamp(t / T.duration)),
+    shake: shakeAt(t), rgb: 0, glitch: 0, seed: 0, slices: 6, sliceAll: 0,
+    radial: 0, lens: 0, grain: 0.075, exposure: 1, shockR: 0, shockS: 0,
+  };
+  if (t < 0 || t >= T.exitEnd || (t >= T.blackStart && t < T.logoStart)) { S.black = 0; return S; }
+  sceneDarkness(t, S);
+  if (t >= T.evidenceStart && t < T.collapseStart) sceneEvidence(t, S);
+  else if (t >= T.collapseStart && t < T.blackStart) sceneCollapse(t, S);
+  else if (t >= T.logoStart) {
+    sceneLogo(t, S);
+    if (t >= T.exitStart) sceneExit(t, S);
+  }
+  return S;
+}
+
+/* =====================================================================
+   Audio (Web Audio API, fully procedural)
+   ===================================================================== */
+class AudioEngine {
+  constructor() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new AC({ latencyHint: 'interactive' });
+    const ctx = this.ctx;
+    this.rng = mulberry32(909);
+
+    this.comp = ctx.createDynamicsCompressor();
+    this.comp.threshold.value = -16;
+    this.comp.knee.value = 8;
+    this.comp.ratio.value = 4;
+    this.comp.attack.value = 0.004;
+    this.comp.release.value = 0.22;
+    this.limiter = ctx.createDynamicsCompressor();
+    this.limiter.threshold.value = -2.5;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = 20;
+    this.limiter.attack.value = 0.001;
+    this.limiter.release.value = 0.08;
+    this.master = ctx.createGain();
+    this.master.gain.value = CONFIG.audio.master;
+    this.comp.connect(this.limiter).connect(this.master).connect(ctx.destination);
+
+    const sr = ctx.sampleRate;
+    this.noise = ctx.createBuffer(1, sr * 2, sr);
+    const nd = this.noise.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = this.rng() * 2 - 1;
+
+    this.ir = this.makeImpulse(3.4, 2.6);
+    this.shaper = this.makeCurve(1.8);
+  }
+
+  makeImpulse(dur, power) {
+    const ctx = this.ctx, sr = ctx.sampleRate, len = Math.floor(sr * dur);
+    const buf = ctx.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        const fadeIn = Math.min(1, i / (sr * 0.004));
+        d[i] = (this.rng() * 2 - 1) * Math.pow(1 - i / len, power) * fadeIn;
+      }
+      for (let k = 0; k < 7; k++) {
+        const at = Math.floor(sr * (0.011 + this.rng() * 0.07));
+        d[at] += (this.rng() - 0.5) * 1.2;
+      }
+    }
+    return buf;
+  }
+
+  makeCurve(k) {
+    const n = 2048, curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; curve[i] = Math.tanh(k * x) / Math.tanh(k); }
+    return curve;
+  }
+
+  // ---- node helpers ----
+  gain(dest, v = 0) { const g = this.ctx.createGain(); g.gain.value = v; g.connect(dest); return g; }
+  filter(type, f, q, dest) { const b = this.ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; b.connect(dest); return b; }
+  osc(type, f, t0, t1, dest) { const o = this.ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t0); o.connect(dest); o.start(t0); o.stop(t1); return o; }
+  noiseSrc(t0, dur, dest) {
+    const s = this.ctx.createBufferSource();
+    s.buffer = this.noise; s.loop = true; s.connect(dest);
+    s.start(t0, this.rng() * 1.5); s.stop(t0 + dur);
+    return s;
+  }
+  perc(g, t, peak, attack, tau) {
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + attack);
+    g.gain.setTargetAtTime(0, t + attack, tau);
+  }
+  send(node, amount, P) { const s = this.gain(P.verbIn, amount); node.connect(s); }
+
+  // ---- sounds ----
+  drone(P, at) {
+    const { bus } = P;
+    const dg = this.gain(bus);
+    const sh = this.ctx.createWaveShaper(); sh.curve = this.shaper; sh.connect(dg);
+    const lp = this.filter('lowpass', 180, 0.8, sh);
+    lp.frequency.setValueAtTime(180, at(T.collapseStart));
+    lp.frequency.exponentialRampToValueAtTime(950, at(T.blackStart - 0.01));
+    [[41.2, 'sine', 0.6], [41.9, 'sine', 0.6], [82.4, 'sawtooth', 0.16]].forEach(([f, type, v]) => {
+      const og = this.gain(lp, v);
+      const o = this.osc(type, f, at(0), at(T.blackStart + 0.01), og);
+      o.frequency.setValueAtTime(f, at(T.collapseStart));
+      o.frequency.exponentialRampToValueAtTime(f * 1.6, at(T.blackStart - 0.01));
+    });
+    dg.gain.setValueAtTime(0.0001, at(0));
+    dg.gain.exponentialRampToValueAtTime(0.30, at(0.8));
+    dg.gain.linearRampToValueAtTime(0.36, at(T.collapseStart));
+    dg.gain.linearRampToValueAtTime(0.5, at(T.blackStart - 0.03));
+    dg.gain.linearRampToValueAtTime(0, at(T.blackStart - 0.008));
+
+    const hg = this.gain(bus);
+    const bp = this.filter('bandpass', 300, 2, hg);
+    this.osc('sawtooth', 100, at(0), at(T.blackStart), bp);
+    this.osc('sine', 150, at(0), at(T.blackStart), this.gain(hg, 0.4));
+    hg.gain.setValueAtTime(0, at(0));
+    hg.gain.linearRampToValueAtTime(0.03, at(0.8));
+    hg.gain.setValueAtTime(0.03, at(T.blackStart - 0.03));
+    hg.gain.linearRampToValueAtTime(0, at(T.blackStart - 0.008));
+
+    [[0.28, 0.13], [0.34, 0.07], [0.40, 0.11]].forEach(([s, v]) => {
+      const g = this.gain(bus);
+      this.noiseSrc(at(s), 0.08, this.filter('bandpass', 2600, 1.4, g));
+      this.perc(g, at(s), v, 0.001, 0.014);
+    });
+    const tg = this.gain(bus);
+    this.osc('sine', 62, at(0.40), at(0.8), tg);
+    this.perc(tg, at(0.40), 0.35, 0.002, 0.07);
+  }
+
+  hit(P, t, k) {
+    const { bus } = P;
+    const i = 0.55 + 0.45 * (k / (T.hits.length - 1));
+    const ng = this.gain(bus);
+    this.noiseSrc(t, 0.2, this.filter('highpass', 1800, 0.7, ng));
+    this.perc(ng, t, 0.5 * i, 0.001, 0.025);
+    this.send(ng, 0.18, P);
+    const tg = this.gain(bus);
+    const o = this.osc('sine', 140, t, t + 0.5, tg);
+    o.frequency.exponentialRampToValueAtTime(46, t + 0.11);
+    this.perc(tg, t, 0.95 * i, 0.002, 0.075);
+    const cg = this.gain(bus);
+    this.osc('square', 1900, t, t + 0.03, this.filter('bandpass', 2400, 3, cg));
+    this.perc(cg, t, 0.06 * i, 0.0005, 0.006);
+  }
+
+  whoosh(P, at) {
+    const { bus } = P;
+    const t0 = at(T.collapseStart), t1 = at(T.blackStart - 0.008);
+    const g = this.gain(bus);
+    const bp = this.filter('bandpass', 280, 0.9, g);
+    bp.frequency.setValueAtTime(280, t0);
+    bp.frequency.exponentialRampToValueAtTime(7500, t1);
+    this.noiseSrc(t0, t1 - t0 + 0.02, bp);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.85, t1 - 0.004);
+    g.gain.linearRampToValueAtTime(0, t1);
+    const rg = this.gain(bus);
+    const o = this.osc('sine', 90, t0, t1 + 0.02, rg);
+    o.frequency.exponentialRampToValueAtTime(560, t1);
+    rg.gain.setValueAtTime(0.0001, t0);
+    rg.gain.exponentialRampToValueAtTime(0.22, t1 - 0.004);
+    rg.gain.linearRampToValueAtTime(0, t1);
+  }
+
+  boom(P, t) {
+    const { bus } = P;
+    const sg = this.gain(bus);
+    const sh = this.ctx.createWaveShaper(); sh.curve = this.shaper; sh.connect(sg);
+    const sub = this.osc('sine', 115, t, t + 3.6, sh);
+    sub.frequency.exponentialRampToValueAtTime(34, t + 0.6);
+    this.perc(sg, t, 0.95, 0.004, 0.85);
+    this.send(sg, 0.3, P);
+
+    const bg = this.gain(bus);
+    const body = this.osc('triangle', 240, t, t + 0.8, bg);
+    body.frequency.exponentialRampToValueAtTime(58, t + 0.18);
+    this.perc(bg, t, 0.55, 0.002, 0.09);
+
+    const cg = this.gain(bus);
+    this.noiseSrc(t, 1.2, this.filter('lowpass', 5000, 0.7, cg));
+    this.perc(cg, t, 0.75, 0.001, 0.05);
+    this.send(cg, 0.85, P);
+
+    const ag = this.gain(bus);
+    this.noiseSrc(t, 0.3, this.filter('highpass', 7000, 0.7, ag));
+    this.perc(ag, t, 0.18, 0.001, 0.03);
+
+    const rg = this.gain(bus);
+    this.noiseSrc(t, 3.5, this.filter('lowpass', 120, 0.9, rg));
+    this.perc(rg, t, 0.5, 0.01, 0.8);
+    this.send(rg, 0.5, P);
+  }
+
+  clack(P, t, pitch) {
+    const { bus } = P;
+    const a = this.gain(bus);
+    this.noiseSrc(t, 0.08, this.filter('highpass', 3000, 0.8, a));
+    this.perc(a, t, 0.55, 0.0005, 0.006);
+    const b = this.gain(bus);
+    this.noiseSrc(t, 0.15, this.filter('bandpass', 1300 * pitch, 5, b));
+    this.perc(b, t, 0.75, 0.001, 0.018);
+    const c = this.gain(bus);
+    this.osc('sine', 175 * pitch, t, t + 0.2, c);
+    this.perc(c, t, 0.4, 0.001, 0.03);
+    const d = this.gain(bus);
+    this.osc('square', 3100 * pitch, t, t + 0.1, this.filter('bandpass', 3100 * pitch, 8, d));
+    this.perc(d, t, 0.05, 0.0005, 0.02);
+    this.send(a, 0.25, P);
+    this.send(b, 0.25, P);
+  }
+
+  ring(P, t) {
+    const { bus } = P;
+    const hp = this.filter('highpass', 250, 0.7, bus);
+    const base = 392;
+    [[1, 0.085, 1.1], [2.76, 0.05, 0.7], [5.40, 0.034, 0.45], [8.93, 0.02, 0.3], [13.34, 0.012, 0.2]].forEach(([r, v, tau]) => {
+      [1, 1.004].forEach(det => {
+        const g = this.gain(hp);
+        this.osc('sine', base * r * det, t, t + 4, g);
+        this.perc(g, t, v * 0.6, 0.002, tau);
+        this.send(g, 0.7, P);
+      });
+    });
+  }
+
+  ticks(P, at) {
+    const { bus } = P;
+    tagTimes.forEach((tt, i) => {
+      if (layout.tag[i] === ' ') return;
+      const t = at(tt);
+      const g = this.gain(bus);
+      this.noiseSrc(t, 0.04, this.filter('bandpass', 3200 + this.rng() * 900, 3, g));
+      this.perc(g, t, 0.05 + this.rng() * 0.03, 0.0005, 0.005);
+      this.send(g, 0.1, P);
+    });
+  }
+
+  glitch(P, at) {
+    const { bus } = P;
+    const freqs = [180, 720, 90, 1440, 360, 2880, 240, 120, 960];
+    const n = 9;
+    const span = T.exitEnd - T.exitStart;
+    for (let j = 0; j < n; j++) {
+      const t = at(T.exitStart + (j / n) * span);
+      const dur = 0.02;
+      const g = this.gain(bus);
+      this.osc('square', freqs[j], t, t + dur + 0.01, g);
+      g.gain.setValueAtTime(0, t);
+      g.gain.setValueAtTime(0.13 + 0.03 * j / n, t + 0.001);
+      g.gain.setValueAtTime(0, t + dur);
+      const ng = this.gain(bus);
+      this.noiseSrc(t, dur + 0.01, this.filter('highpass', 1200, 0.7, ng));
+      ng.gain.setValueAtTime(0, t);
+      ng.gain.setValueAtTime(0.1, t + 0.001);
+      ng.gain.setValueAtTime(0, t + dur);
+    }
+  }
+
+  schedule(t0) {
+    const ctx = this.ctx;
+    const at = s => t0 + s;
+    const bus = ctx.createGain();
+    bus.connect(this.comp);
+    const verbIn = ctx.createGain();
+    const conv = ctx.createConvolver();
+    conv.buffer = this.ir;
+    const verbOut = ctx.createGain();
+    verbOut.gain.value = 0.55;
+    verbIn.connect(conv).connect(verbOut).connect(bus);
+    const P = { bus, verbIn, verbOut };
+
+    this.drone(P, at);
+    T.hits.forEach((ht, k) => this.hit(P, at(ht), k));
+    this.whoosh(P, at);
+    this.boom(P, at(T.logoStart));
+    T.unTimes.forEach((ut, i) => this.clack(P, at(ut), i ? 0.88 : 1));
+    this.ring(P, at(T.ringOut));
+    this.ticks(P, at);
+    this.glitch(P, at);
+
+    verbOut.gain.setValueAtTime(0.55, at(T.blackStart - 0.03));
+    verbOut.gain.linearRampToValueAtTime(0, at(T.blackStart - 0.008));
+    verbOut.gain.setValueAtTime(0, at(T.logoStart - 0.004));
+    verbOut.gain.linearRampToValueAtTime(0.6, at(T.logoStart));
+
+    bus.gain.setValueAtTime(1, at(T.exitEnd - 0.006));
+    bus.gain.linearRampToValueAtTime(0, at(T.exitEnd + 0.012));
+
+    P.stop = () => {
+      const n = ctx.currentTime;
+      bus.gain.cancelScheduledValues(n);
+      bus.gain.setValueAtTime(bus.gain.value, n);
+      bus.gain.linearRampToValueAtTime(0, n + 0.03);
+      setTimeout(() => { try { bus.disconnect(); } catch (_) {} }, 200);
+    };
+    return P;
+  }
+
+  now() {
+    const ctx = this.ctx;
+    if (ctx.getOutputTimestamp) {
+      const ts = ctx.getOutputTimestamp();
+      if (ts && ts.contextTime > 0 && ts.performanceTime > 0) {
+        return ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+      }
+    }
+    return ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0);
+  }
+}
+
+/* =====================================================================
+   Playback control
+   ===================================================================== */
+let audio = null;
+let currentPlay = null;
+let state = 'idle';
+let playStart = 0;
+let clockMode = 'perf';
+let lastT = -1;
+let hintPinned = null;
+let counterKey = -1;
+
+const params = new URLSearchParams(location.search);
+const frozen = params.has('frame') ? parseFloat(params.get('frame')) : null;
+if (frozen !== null) { overlay.classList.add('hidden'); hint.classList.remove('show'); }
+
+function clockNow() {
+  return clockMode === 'audio' && audio ? audio.now() : performance.now() / 1000;
+}
+
+function play() {
+  if (!audio) {
+    try { audio = new AudioEngine(); } catch (e) { audio = null; console.warn('Audio unavailable', e); }
+  }
+  if (currentPlay) { currentPlay.stop(); currentPlay = null; }
+  const lead = 0.15;
+  if (audio) {
+    audio.ctx.resume();
+    playStart = audio.ctx.currentTime + lead;
+    currentPlay = audio.schedule(playStart);
+    clockMode = 'audio';
+    const engine = audio;
+    setTimeout(() => {
+      if (engine.ctx.state !== 'running' && clockMode === 'audio') {
+        console.warn('Audio is blocked by the browser; playing visuals only.');
+        clockMode = 'perf';
+        playStart = performance.now() / 1000 + 0.05;
+        lastT = -1;
+      }
+    }, 400);
+  } else {
+    playStart = performance.now() / 1000 + lead;
+    clockMode = 'perf';
+  }
+  lastT = -1;
+  logoKey = '';
+  counterKey = -1;
+  state = 'playing';
+  overlay.classList.add('hidden');
+  document.body.classList.add('playing');
+  if (hintPinned !== true) hint.classList.remove('show');
+}
+
+overlay.addEventListener('click', play);
+window.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'r') play();
+  else if (k === 'f') {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen).call(document.documentElement);
+  } else if (k === 'h') {
+    const show = !hint.classList.contains('show');
+    hint.classList.toggle('show', show);
+    hintPinned = show;
+  }
+});
+document.addEventListener('fullscreenchange', () => setTimeout(resize, 50));
+if (params.has('autoplay') && frozen === null) play();
+
+/* =====================================================================
+   Render loop
+   ===================================================================== */
+const cB = hexRgb(COL.black), cG = hexRgb(COL.graphite), cBl = hexRgb(COL.blue), cP = hexRgb(COL.paper), cR = hexRgb(COL.red);
+
+function updateTextures(S) {
+  if (S.counterP >= 0) {
+    const key = Math.round(Math.min(S.counterP, 3) * 120);
+    if (key !== counterKey) {
+      counterKey = key;
+      drawCounter(Math.min(S.counterP, 3));
+      uploadTexture(tex.f4, cv.counter);
+    }
+  }
+  if (S.logoOn) {
+    if (drawLogo(S.unCount, S.tagCount, S.cursor)) uploadTexture(tex.logo, cv.logo);
+  }
+}
+
+function drawScene(t, S) {
+  const { loc } = sceneProg;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.viewport(0, 0, fbW, fbH);
+  gl.useProgram(sceneProg.p);
+  const units = [['uF0', tex.f0], ['uF1', tex.f1], ['uF2', tex.f2], ['uF3', tex.f3], ['uF4', tex.f4], ['uStamp', tex.stamp], ['uLogo', tex.logo]];
+  units.forEach(([name, tx], i) => {
+    gl.activeTexture(gl.TEXTURE0 + i);
+    gl.bindTexture(gl.TEXTURE_2D, tx);
+    gl.uniform1i(loc[name], i);
+  });
+  gl.uniform2f(loc.uRes, fbW, fbH);
+  gl.uniform1f(loc.uTime, t);
+  gl.uniform3fv(loc.cBlack, cB);
+  gl.uniform3fv(loc.cGraphite, cG);
+  gl.uniform3fv(loc.cBlue, cBl);
+  gl.uniform3fv(loc.cPaper, cP);
+  gl.uniform3fv(loc.cRed, cR);
+  gl.uniform1f(loc.uDust, S.dust);
+  gl.uniform3fv(loc.uCRT, S.crt);
+  gl.uniform1i(loc.uFragIdx, S.fragIdx);
+  gl.uniform1f(loc.uFragBright, S.fragBright);
+  gl.uniform1f(loc.uFragAge, S.fragAge);
+  gl.uniform1f(loc.uFragRot, S.fragRot);
+  gl.uniform1f(loc.uFragScale, S.fragScale);
+  gl.uniform1f(loc.uFragReveal, S.fragReveal);
+  gl.uniform2fv(loc.uFragOff, S.fragOff);
+  gl.uniform1f(loc.uWall, S.wall);
+  gl.uniform1f(loc.uLogoOn, S.logoOn);
+  gl.uniform1f(loc.uFScale, S.fScale);
+  gl.uniform1f(loc.uFShift, S.fShift);
+  gl.uniform1f(loc.uFAlpha, S.fAlpha);
+  gl.uniform2fv(loc.uFCenter, layout.fCenter);
+  gl.uniform2fv(loc.uUCenter, layout.uCenter);
+  gl.uniform1f(loc.uUSplit, layout.uSplit);
+  gl.uniform2fv(loc.uUDt, S.uDt);
+  gl.uniform4fv(loc.uRedBox, layout.redBox);
+  gl.uniform1f(loc.uRedP, S.redP);
+  gl.uniform1f(loc.uSweep, S.sweep);
+  gl.uniform1f(loc.uTagAlpha, S.tagAlpha);
+  gl.uniform1f(loc.uLogoLight, S.logoLight);
+  gl.bindVertexArray(vao);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+function drawPost(t, S) {
+  const { loc } = postProg;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, fbW, fbH);
+  gl.useProgram(postProg.p);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, fboTex);
+  gl.uniform1i(loc.uScene, 0);
+  gl.uniform2f(loc.uRes, fbW, fbH);
+  gl.uniform1f(loc.uTime, t);
+  gl.uniform1f(loc.uZoom, S.zoom);
+  gl.uniform2fv(loc.uShake, S.shake);
+  gl.uniform1f(loc.uRGB, S.rgb);
+  gl.uniform1f(loc.uGlitch, S.glitch);
+  gl.uniform1f(loc.uSeed, S.seed);
+  gl.uniform1f(loc.uSlices, S.slices);
+  gl.uniform1f(loc.uSliceAll, S.sliceAll);
+  gl.uniform1f(loc.uRadial, S.radial);
+  gl.uniform1f(loc.uLens, S.lens);
+  gl.uniform1f(loc.uGrain, S.grain);
+  gl.uniform1f(loc.uExposure, S.exposure);
+  gl.uniform1f(loc.uBlack, S.black);
+  gl.uniform1f(loc.uShockR, S.shockR);
+  gl.uniform1f(loc.uShockS, S.shockS);
+  gl.bindVertexArray(vao);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+function render() {
+  requestAnimationFrame(render);
+  let t;
+  if (frozen !== null) t = frozen;
+  else if (state === 'idle') t = -1;
+  else {
+    t = clockNow() - playStart;
+    if (t < lastT) t = lastT;
+    lastT = t;
+  }
+
+  const S = frameState(t);
+  if (S.black === 0) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, fbW, fbH);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  } else {
+    updateTextures(S);
+    drawScene(t, S);
+    drawPost(t, S);
+  }
+
+  if (state === 'playing' && t > T.duration + 0.5) {
+    state = 'done';
+    if (currentPlay) currentPlay = null;
+  }
+}
+requestAnimationFrame(render);
+
+})();
+</script>
+</body>
+</html>

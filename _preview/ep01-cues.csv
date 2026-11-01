@@ -1,0 +1,89 @@
+reel_seconds,reel_tc,scene,scene_id,scene_time,each_file_seconds,type,strength,source
+1.780,00:00:01:47,1,cold-open-951m,1.180,1.430,FLASH,soft,Counter
+11.900,00:00:11:54,2,police-quote,4.800,5.050,ACCENT,soft,QuoteCard
+20.300,00:00:20:18,3,flash-cuts,0.200,0.450,GLITCH,hard,flash-cuts
+21.400,00:00:21:24,3,flash-cuts,1.300,1.550,GLITCH,hard,flash-cuts
+22.600,00:00:22:36,3,flash-cuts,2.500,2.750,GLITCH,hard,flash-cuts
+23.500,00:00:23:30,3,flash-cuts,3.400,3.650,GLITCH,hard,flash-cuts
+27.800,00:00:27:48,3,flash-cuts,7.700,7.950,GLITCH,medium,out transition
+29.100,00:00:29:06,4,act-1,0.000,0.250,GLITCH,medium,in transition
+29.500,00:00:29:30,4,act-1,0.400,0.650,ACCENT,soft,TitleCard
+33.800,00:00:33:48,4,act-1,4.700,4.950,GLITCH,medium,out transition
+47.500,00:00:47:30,6,roll-back,1.400,1.650,ACCENT,soft,CalendarFlip
+49.300,00:00:49:18,6,roll-back,3.200,3.450,IMPACT,medium,CalendarFlip
+61.200,00:01:01:12,7,cv-email,6.600,6.850,GLITCH,medium,EmailCard
+66.799,00:01:06:48,8,network-spread,1.699,1.949,ACCENT,medium,NetworkSpread
+75.833,00:01:15:50,8,network-spread,10.733,10.983,GLITCH,hard,NetworkSpread
+85.100,00:01:25:06,9,act-2,0.000,0.250,GLITCH,medium,in transition
+85.500,00:01:25:30,9,act-2,0.400,0.650,ACCENT,soft,TitleCard
+89.800,00:01:29:48,9,act-2,4.700,4.950,GLITCH,medium,out transition
+123.120,00:02:03:07,13,shalika-founder,2.520,2.770,ACCENT,soft,FactCard
+141.600,00:02:21:36,14,five-day-window,11.000,11.250,ACCENT,soft,CalendarStrip
+145.600,00:02:25:36,14,five-day-window,15.000,15.250,ACCENT,soft,CalendarStrip
+149.600,00:02:29:36,14,five-day-window,19.000,19.250,ACCENT,soft,CalendarStrip
+155.750,00:02:35:45,14,five-day-window,25.150,25.400,IMPACT,medium,CalendarStrip
+162.600,00:02:42:36,15,act-3,0.000,0.250,GLITCH,medium,in transition
+163.000,00:02:43:00,15,act-3,0.400,0.650,ACCENT,soft,TitleCard
+167.300,00:02:47:18,15,act-3,4.700,4.950,GLITCH,medium,out transition
+172.600,00:02:52:36,16,two-bytes,4.000,4.250,FLASH,hard,HexPatch
+179.450,00:02:59:27,16,two-bytes,10.850,11.100,GLITCH,hard,HexPatch
+194.000,00:03:14:00,17,deleted-records,6.400,6.650,GLITCH,medium,Ledger
+194.600,00:03:14:36,17,deleted-records,7.000,7.250,GLITCH,medium,Ledger
+195.200,00:03:15:12,17,deleted-records,7.600,7.850,GLITCH,medium,Ledger
+195.800,00:03:15:48,17,deleted-records,8.200,8.450,GLITCH,medium,Ledger
+196.400,00:03:16:24,17,deleted-records,8.800,9.050,GLITCH,medium,Ledger
+205.800,00:03:25:48,18,jupiter-match,5.200,5.450,IMPACT,hard,Compare
+214.943,00:03:34:57,19,total-fluke,3.343,3.593,ACCENT,soft,QuoteCard
+238.200,00:03:58:12,20,funds-trace,14.600,14.850,HIT,medium,WorldMap
+249.400,00:04:09:24,21,sri-lanka-questions,3.800,4.050,ACCENT,soft,FlowChart
+252.400,00:04:12:24,21,sri-lanka-questions,6.800,7.050,ACCENT,soft,FlowChart
+255.400,00:04:15:24,21,sri-lanka-questions,9.800,10.050,ACCENT,medium,sri-lanka-questions
+258.000,00:04:18:00,21,sri-lanka-questions,12.400,12.650,ACCENT,soft,FlowChart
+262.600,00:04:22:36,22,act-4,0.000,0.250,GLITCH,medium,in transition
+263.000,00:04:23:00,22,act-4,0.400,0.650,ACCENT,soft,TitleCard
+267.300,00:04:27:18,22,act-4,4.700,4.950,GLITCH,medium,out transition
+272.000,00:04:32:00,23,messages-printed,3.400,3.650,ACCENT,soft,Timeline
+286.400,00:04:46:24,24,no-reply,2.800,3.050,HIT,medium,no-reply
+288.000,00:04:48:00,24,no-reply,4.400,4.650,HIT,medium,no-reply
+289.600,00:04:49:36,24,no-reply,6.000,6.250,HIT,medium,no-reply
+292.400,00:04:52:24,24,no-reply,8.800,9.050,ACCENT,soft,TimeChip
+299.000,00:04:59:00,25,stop-orders,1.400,1.650,ACCENT,soft,CalendarStrip
+301.000,00:05:01:00,25,stop-orders,3.400,3.650,ACCENT,soft,CalendarStrip
+308.600,00:05:08:36,25,stop-orders,11.000,11.250,ACCENT,soft,CalendarStrip
+309.200,00:05:09:12,25,stop-orders,11.600,11.850,ACCENT,soft,CalendarStrip
+311.600,00:05:11:36,25,stop-orders,14.000,14.250,ACCENT,soft,CalendarStrip
+316.200,00:05:16:12,25,stop-orders,18.600,18.850,ACCENT,soft,FlowChart
+320.000,00:05:20:00,25,stop-orders,22.400,22.650,ACCENT,soft,CalendarStrip
+320.200,00:05:20:12,25,stop-orders,22.600,22.850,ACCENT,medium,stop-orders
+327.300,00:05:27:18,26,withdrawn,0.700,0.950,ACCENT,soft,FactCard
+329.520,00:05:29:31,26,withdrawn,2.920,3.170,ACCENT,soft,FactCard
+336.100,00:05:36:06,27,act-5,0.000,0.250,GLITCH,medium,in transition
+336.500,00:05:36:30,27,act-5,0.400,0.650,ACCENT,soft,TitleCard
+340.800,00:05:40:48,27,act-5,4.700,4.950,GLITCH,medium,out transition
+348.100,00:05:48:06,28,money-flow,6.000,6.250,ACCENT,medium,FlowChart
+351.700,00:05:51:42,28,money-flow,9.600,9.850,ACCENT,soft,FlowChart
+365.900,00:06:05:54,29,private-jet,5.800,6.050,HIT,soft,private-jet
+367.700,00:06:07:42,29,private-jet,7.600,7.850,FLASH,medium,private-jet
+374.620,00:06:14:37,30,kim-wong,2.520,2.770,ACCENT,soft,FactCard
+396.100,00:06:36:06,32,act-6,0.000,0.250,GLITCH,medium,in transition
+396.500,00:06:36:30,32,act-6,0.400,0.650,ACCENT,soft,TitleCard
+400.800,00:06:40:48,32,act-6,4.700,4.950,GLITCH,medium,out transition
+411.600,00:06:51:36,33,story-breaks,9.500,9.750,ACCENT,soft,Timeline
+416.600,00:06:56:36,33,story-breaks,14.500,14.750,ACCENT,soft,Timeline
+428.450,00:07:08:27,34,lazarus-code,5.350,5.600,ACCENT,medium,Compare
+433.600,00:07:13:36,34,lazarus-code,10.500,10.750,GLITCH,hard,Compare
+458.100,00:07:38:06,37,act-7,0.000,0.250,GLITCH,medium,in transition
+458.500,00:07:38:30,37,act-7,0.400,0.650,ACCENT,soft,TitleCard
+462.800,00:07:42:48,37,act-7,4.700,4.950,GLITCH,medium,out transition
+464.700,00:07:44:42,38,ten-years,0.600,0.850,ACCENT,soft,CalendarFlip
+466.700,00:07:46:42,38,ten-years,2.600,2.850,IMPACT,medium,CalendarFlip
+470.800,00:07:50:48,39,deguito-convicted,0.700,0.950,ACCENT,soft,FactCard
+473.020,00:07:53:01,39,deguito-convicted,2.920,3.170,ACCENT,soft,FactCard
+480.800,00:08:00:48,40,rcbc-fine,0.700,0.950,ACCENT,soft,FactCard
+483.020,00:08:03:01,40,rcbc-fine,2.920,3.170,ACCENT,soft,FactCard
+504.800,00:08:24:48,42,charge-sheet,0.700,0.950,ACCENT,soft,FactCard
+507.020,00:08:27:01,42,charge-sheet,2.920,3.170,ACCENT,soft,FactCard
+522.800,00:08:42:48,44,delayed-98,0.700,0.950,ACCENT,soft,FactCard
+525.100,00:08:45:06,44,delayed-98,3.000,3.250,FLASH,soft,FactCard
+532.600,00:08:52:36,45,end-screen,0.500,0.750,GLITCH,hard,EndScreen
+533.500,00:08:53:30,45,end-screen,1.400,1.650,FLASH,soft,EndScreen
