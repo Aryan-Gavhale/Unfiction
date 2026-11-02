@@ -1,0 +1,510 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EP01 — Bangladesh Bank Heist — ME replacements</title>
+<!--
+  Unfiction · EP01 · the 27 ME beats, rebuilt faceless. Four treatments:
+    NARRATOR  the channel's narrator figure in one recurring room with an evidence wall
+    TEXT      the line itself, set large and landing with the voice (UF.BigText)
+    BOARD     a full-screen evidence board
+    KEY       big text with no background: open with ?key and SHIFT+E to export on green,
+              then key it over the shot named in the scene title (anim-scenes.html / gfx-scenes.html)
+
+  SPACE play/pause · ←/→ previous/next · 1-9 jump · E export · SHIFT+E export all · K editorial check
+  To retime a beat to your voice-over, change the numbers in its scene only.
+-->
+<script src="../../toolkit/core/uf-core.js"></script>
+<script src="../../toolkit/core/uf-draw.js"></script>
+<script src="../../toolkit/components/uf-overlays.js"></script>
+<script src="../../toolkit/components/uf-board.js"></script>
+<script src="../../toolkit/components/uf-bigtext.js"></script>
+<script src="../../toolkit/components/uf-props.js"></script>
+<script src="../../toolkit/components/uf-character.js"></script>
+<script src="../../toolkit/components/uf-sets.js"></script>
+</head>
+<body>
+<script>
+'use strict';
+
+const D = UF.draw;
+const { c, seg, ease } = UF;
+const W = UF.W, H = UF.H;
+const prop = (type, o) => new UF.Prop(Object.assign({ type }, o));
+
+/* ==================================================================== */
+/* The narrator room                                                    */
+/* ==================================================================== */
+const K = 4.2;     // px per cm in the room
+const F = 1010;    // floor line
+
+/**
+ * A small cork board on the room's wall. Cards are placed relative to the board centre.
+ * card: { id, x, y, text, sub, at, w, h, color: 'paper' | 'red', angle, flip: { at, text, sub } }
+ */
+class WallBoard extends UF.Component {
+  constructor(o) { super({ x: 520, y: 400, w: 600, h: 380, cards: [], strings: [] }, o); }
+
+  point(id) {
+    const cd = this.cards.find(k => k.id === id);
+    if (!cd) throw new Error(`WallBoard: no card "${id}".`);
+    return [this.x + cd.x, this.y + cd.y];
+  }
+
+  draw(ctx, t) {
+    const a = this.vis(t);
+    if (a <= 0) return;
+    const { x, y, w, h } = this;
+    ctx.save();
+    ctx.globalAlpha = a;
+    D.roundRect(ctx, x - w / 2 - 12, y - h / 2 - 12, w + 24, h + 24, 6);
+    ctx.fillStyle = '#2a2119'; ctx.fill();
+    const g = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+    g.addColorStop(0, '#6e5434'); g.addColorStop(1, '#4f3c26');
+    ctx.fillStyle = g; ctx.fillRect(x - w / 2, y - h / 2, w, h);
+
+    for (const s of this.strings) {
+      const p = ease.inOutCubic(seg(t, s.at, 0.7));
+      if (p <= 0) continue;
+      const [x0, y0] = this.point(s.from), [x1, y1] = this.point(s.to);
+      ctx.strokeStyle = c('red'); ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x0, y0 - 40); ctx.lineTo(x0 + (x1 - x0) * p, y0 - 40 + (y1 - y0) * p); ctx.stroke();
+    }
+
+    for (const cd of this.cards) {
+      if (t < cd.at) continue;
+      const p = ease.outBack(seg(t, cd.at, 0.45));
+      const u = cd.flip ? seg(t, cd.flip.at, 0.5) : 0;
+      const face = cd.flip && u >= 0.5 ? cd.flip : cd;
+      const cw = cd.w || 190, ch = cd.h || 120;
+      ctx.save();
+      ctx.translate(x + cd.x, y + cd.y);
+      ctx.rotate((cd.angle ?? 0) * Math.PI / 180);
+      ctx.scale(p * Math.max(0.02, Math.abs(Math.cos(Math.PI * u))), p);
+      const red = (face.color || cd.color) === 'red';
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(-cw / 2 + 5, -ch / 2 + 7, cw, ch);
+      ctx.fillStyle = red ? '#b3262c' : '#e9e3d6'; ctx.fillRect(-cw / 2, -ch / 2, cw, ch);
+      ctx.fillStyle = red ? '#f2e9dc' : '#b3262c';
+      ctx.beginPath(); ctx.arc(0, -ch / 2 + 12, 6, 0, Math.PI * 2); ctx.fill();
+      const lines = face.text.split('\n');
+      ctx.font = UF.font.sans(lines.length > 1 ? 24 : 28, 'bold');
+      lines.forEach((ln, i) => D.text(ctx, ln, 0, (i - (lines.length - 1) / 2) * 30 + (face.sub ? -6 : 8),
+        { color: red ? '#fff6ea' : '#1d1b18', align: 'center', baseline: 'middle' }));
+      if (face.sub) {
+        ctx.font = UF.font.mono(14, 'bold');
+        D.text(ctx, face.sub, 0, ch / 2 - 18, { color: red ? 'rgba(255,246,234,.8)' : 'rgba(29,27,24,.6)', align: 'center', baseline: 'middle', spacing: 2 });
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  editorial() { return {}; }
+}
+
+/**
+ * One narrator beat in the room.
+ * o.cards / o.strings  the wall board
+ * o.fig                Character options, or ({ board, chair, monitor }) => options
+ * o.seated             start in the chair at the desk instead of standing by the board
+ * o.monitor            extra options for the desk monitor
+ * o.moves              Camera moves; o.over: layers drawn on top, outside the camera
+ */
+function narratorScene(id, title, end, o) {
+  const P = (type, p) => prop(type, Object.assign({ scale: K }, p));
+  const desk = P('desk', { x: 1340, y: F, length: 130 });
+  const top = desk.point('top')[1];
+  const chair = P('chair', { x: 1010, y: F });
+  const monitor = P('monitor', Object.assign({ x: 1420, y: top, content: 'dashboard', glow: true }, o.monitor));
+  const board = new WallBoard({ cards: o.cards || [], strings: o.strings || [] });
+  const f = typeof o.fig === 'function' ? o.fig({ board, chair, monitor }) : (o.fig || {});
+  const fig = new UF.Character(Object.assign({
+    role: 'main', x: o.seated ? chair.point('seat')[0] : 900, y: F, scale: K,
+    facing: o.seated ? 1 : -1, start: o.seated ? 'sitLean' : 'stand', seed: 3,
+  }, f));
+  const layers = [
+    new UF.Room({ floor: F, wall: '#1a1e26', ground: '#0e1014', dim: 0.15 }),
+    P('window', { x: 1700, y: 330, w: 80, h: 90, mode: 'night', blinds: 0.7 }),
+    board,
+    desk,
+    monitor,
+    P('lamp', { x: 1590, y: top, on: true }),
+    P('mug', { x: 1520, y: top }),
+    chair,
+    fig,
+    new UF.Light({ type: 'pool', x: 520, y: 420, r: 520, ry: 360, color: '#ffd9a0', alpha: 0.06 }),
+    new UF.Light({ type: 'pool', x: 1480, y: 760, r: 520, ry: 300, color: '#ffd59a', alpha: 0.07 }),
+    new UF.Light({ type: 'vignette', x: 960, y: 560, r: 1100, color: '#000000', alpha: 0.55 }),
+  ];
+  return {
+    id, title, duration: end, pushIn: 0,
+    layers: [
+      new UF.Camera({ layers, x: 960, y: 580, zoom: 1.04, handheld: 0.6, moves: o.moves || [{ at: 0, dur: end, zoom: 1.12 }] }),
+      ...(o.over || []),
+      new UF.DramaLabel({ text: 'ILLUSTRATION', at: 0.2, plate: true }),
+    ],
+  };
+}
+
+/** Big text on black (o.bg !== false) or keyed over another shot. */
+function textScene(id, title, end, text, o = {}) {
+  return {
+    id, title, duration: end, pushIn: o.bg === false ? 0 : 0.02,
+    transition: o.transition,
+    layers: [
+      ...(o.bg === false ? [] : [new UF.Background({ style: 'void', dust: false })]),
+      new UF.BigText(text),
+      ...(o.source ? [new UF.SourceTag({ text: o.source, at: o.sourceAt ?? 1, x: W / 2, align: 'center', y: H - 64 })] : []),
+    ],
+  };
+}
+
+/** A full-screen evidence board. */
+function boardScene(id, title, end, board, source) {
+  return {
+    id, title, duration: end, pushIn: 0,
+    layers: [
+      new UF.EvidenceBoard(Object.assign({ surface: 'cork', light: true, seed: 9 }, board)),
+      new UF.SourceTag(source ? { text: source, at: 1 } : { text: 'Summary of the story so far', label: 'NOTE', at: 1 }),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* Cold open – Act 2                                                    */
+/* ==================================================================== */
+const scenes = [
+  // L03 · "And most of it was stopped. Not by security software. Not by a guard. By a single word..."
+  textScene('l03-one-word', 'L03 · TEXT · One word', 11, {
+    kicker: 'AND MOST OF IT WAS STOPPED', kickerAt: 0.3, dimPrev: true,
+    lines: [
+      { text: 'NOT SECURITY SOFTWARE.', at: 2.6, size: 96 },
+      { text: 'NOT A GUARD.', at: 4.2, size: 96 },
+      { text: 'ONE WORD.', at: 6.2, size: 170, color: 'red', hit: true },
+      { text: 'IN A STREET ADDRESS · THE NAME OF A PLANET', at: 7.8, sub: true },
+    ],
+  }),
+
+  // L06 · "It wasn't. That printer was the only witness."  KEY over L04 (printer, morning)
+  textScene('l06-only-witness', 'L06 · KEY over L04 printer · The only witness', 5.5, {
+    lines: [
+      { text: "IT WASN'T.", at: 0.3, size: 90 },
+      { text: 'THAT PRINTER WAS', at: 1.4, size: 110 },
+      { text: 'THE ONLY WITNESS.', at: 2.4, size: 130, color: 'red', hit: true },
+    ],
+  }, { bg: false }),
+
+  // L08 · "I'm going to show you exactly how they did it... did the thieves have help from the inside?"
+  narratorScene('l08-inside-help', 'L08 · NARRATOR · Inside help?', 20, {
+    cards: [
+      { id: 'how', x: -150, y: -70, text: 'HOW THEY\nDID IT', at: 1.6, angle: -3 },
+      { id: 'proof', x: 120, y: -90, text: 'THE REAL\nEVIDENCE', at: 3.2, angle: 2 },
+      { id: 'inside', x: 0, y: 90, text: 'INSIDE HELP?', at: 15.4, color: 'red', w: 230, angle: -1 },
+    ],
+    strings: [{ from: 'how', to: 'proof', at: 4.2 }],
+    fig: ({ board }) => ({
+      start: 'think',
+      actions: [
+        { at: 1.2, pose: 'point', target: board.point('how') },
+        { at: 5.2, pose: 'talk' },
+        { at: 14.6, pose: 'reach', target: board.point('inside') },
+        { at: 17.2, view: 'front', pose: 'talk' },
+      ],
+    }),
+    moves: [{ at: 0, dur: 14, zoom: 1.12 }, { at: 14.4, dur: 1.8, x: 760, y: 520, zoom: 1.5, ease: 'inOutCubic' }, { at: 17, dur: 2.4, x: 900, y: 560, zoom: 1.3 }],
+  }),
+
+  // L12 · "So here's the first question. If the money is in New York, how do you move it from Dhaka?"
+  narratorScene('l12-first-question', 'L12 · NARRATOR · The first question', 8, {
+    seated: true,
+    cards: [
+      { id: 'dhaka', x: -170, y: -40, text: 'DHAKA', at: 0.6 },
+      { id: 'ny', x: 160, y: -60, text: 'NEW YORK', sub: 'THE RESERVES', at: 1.4 },
+      { id: 'q', x: 0, y: 100, text: 'HOW?', color: 'red', at: 4.6 },
+    ],
+    strings: [{ from: 'dhaka', to: 'ny', at: 2.4 }],
+    fig: { actions: [{ at: 3.4, pose: 'sitThink' }] },
+  }),
+
+  // L15 · "...a thief doesn't need to break into a vault in New York. They just need to sit at the right computer in Dhaka and write the letter."
+  narratorScene('l15-write-the-letter', 'L15 · NARRATOR · Write the letter', 12, {
+    seated: true,
+    monitor: { content: 'text', text: 'PAY THIS AMOUNT' },
+    fig: { start: 'sitType' },
+    moves: [{ at: 0, dur: 5, zoom: 1.1 }, { at: 6.4, dur: 2.6, x: 1400, y: 610, zoom: 1.8, ease: 'inOutCubic' }],
+  }),
+
+  // L19 · "Rasel Ahlam did not exist."
+  textScene('l19-did-not-exist', 'L19 · TEXT · Did not exist', 4.5, {
+    lines: [
+      { text: 'RASEL AHLAM', at: 0.3, size: 150, strike: 1.5 },
+      { text: 'DID NOT EXIST.', at: 1.9, size: 110, color: 'red', hit: true },
+    ],
+  }),
+
+  // L23 · "Why would thieves sit inside a bank for a year and steal nothing? ..."
+  boardScene('l23-a-year-inside', 'L23 · BOARD · A year inside', 18, {
+    cards: [
+      { id: 'pc', kind: 'note', x: 470, y: 380, at: 0.5, title: 'ONE INFECTED PC', text: 'Jan 2015 · a CV download' },
+      { id: 'swift', kind: 'doc', x: 1450, y: 400, at: 1.6, title: 'SWIFT TERMINAL', sub: 'BANGLADESH BANK' },
+      { id: 'wait', kind: 'tag', x: 960, y: 700, at: 4.4, title: '12 MONTHS', sub: 'NOTHING STOLEN' },
+      { id: 'where', kind: 'note', x: 960, y: 260, at: 11.2, title: 'THE HARD PART', text: 'Where can $1 billion go\nwithout anyone stopping it?',
+        mark: { at: 14, color: 'red' } },
+    ],
+    strings: [{ from: 'pc', to: 'swift', at: 2.6, label: 'INSIDE' }],
+    camera: [{ t: 0, center: [960, 540], zoom: 1 }, { t: 11, center: 'where', zoom: 1.45, dur: 1.8, ease: 'inOutCubic' }],
+  }),
+
+  // L29 · "Four strangers. Same title, same salary, fake IDs, empty accounts... that branch manager"
+  boardScene('l29-four-strangers', 'L29 · BOARD · Four strangers', 13, {
+    cards: [0, 1, 2, 3].map(i => ({
+      id: `a${i}`, kind: 'doc', x: 330 + i * 420, y: 360, at: 0.4 + i * 0.5,
+      title: `ACCOUNT ${i + 1}`, text: 'Same job title\nSame salary\n$500 deposit',
+      stamp: { text: 'FAKE LICENCE', at: 2.6 + i * 0.4, color: 'red', angle: -14, kick: i === 3 },
+    })).concat([{ id: 'mgr', kind: 'doc', x: 960, y: 800, at: 8.4, title: 'BRANCH MANAGER', sub: 'RCBC · JUPITER ST', mark: { at: 10.4, color: 'red' } }]),
+    strings: [0, 1, 2, 3].map(i => ({ from: `a${i}`, to: 'mgr', at: 8.9 + i * 0.15 })),
+  }),
+
+  // L32 · "Now, the routes were ready. But a billion-dollar transfer gets noticed... They needed time."
+  textScene('l32-needed-time', 'L32 · TEXT · They needed time', 16, {
+    dimPrev: true,
+    lines: [
+      { text: 'THE ROUTES WERE READY.', at: 0.4, size: 90 },
+      { text: 'BUT A BILLION-DOLLAR TRANSFER GETS NOTICED.', at: 2.6, size: 60 },
+      { text: 'THEY NEEDED', at: 13.0, size: 120 },
+      { text: 'TIME.', at: 14.0, size: 190, color: 'red', hit: true },
+    ],
+  }),
+
+  // L39 · "That's not a lucky hack. That's planned."
+  textScene('l39-planned', 'L39 · TEXT · Planned', 4.5, {
+    lines: [
+      { text: 'NOT A LUCKY HACK.', at: 0.3, size: 100 },
+      { text: 'PLANNED.', at: 1.9, size: 190, color: 'red', hit: true },
+    ],
+  }),
+
+  /* ================================================================== */
+  /* Acts 3–4                                                           */
+  /* ================================================================== */
+
+  // L41 · "But before they could send a single payment... the bank kept records, on screen and on paper."
+  narratorScene('l41-screen-and-paper', 'L41 · NARRATOR · On screen and on paper', 11, {
+    cards: [
+      { id: 'screen', x: -140, y: -20, text: 'ON SCREEN', sub: 'THE DATABASE', at: 6.0, angle: -2 },
+      { id: 'paper', x: 150, y: 10, text: 'ON PAPER', sub: 'THE PRINTER', at: 8.0, angle: 2 },
+    ],
+    fig: ({ board }) => ({
+      start: 'talk',
+      actions: [
+        { at: 6.2, pose: 'point', target: board.point('screen') },
+        { at: 8.2, pose: 'point', target: board.point('paper') },
+      ],
+    }),
+  }),
+
+  // L45 · "Two bytes. The check still ran, but its answer no longer mattered..."
+  textScene('l45-two-bytes', 'L45 · TEXT · Two bytes', 10, {
+    lines: [
+      { text: 'TWO BYTES.', at: 0.2, size: 200, hit: true },
+      { text: 'THE CHECK STILL RAN.', at: 2.6, size: 64 },
+      { text: 'ITS ANSWER NO LONGER MATTERED.', at: 4.4, size: 64, color: 'red' },
+    ],
+  }),
+
+  // L49 · "And here's something most versions of this story leave out... the Fed initially rejected the requests."
+  narratorScene('l49-twist-one', 'L49 · NARRATOR · Twist one', 9.5, {
+    fig: { x: 960, facing: 1, start: 'think', actions: [{ at: 2.4, view: 'front', pose: 'talk' }] },
+    moves: [{ at: 0, dur: 2.2, zoom: 1.08 }, { at: 2.4, dur: 3, x: 960, y: 560, zoom: 1.35, ease: 'inOutCubic' }],
+    over: [new UF.BigText({ kicker: 'TWIST 1', kickerAt: 5.6, y: 190, lines: [{ text: 'THE FED SAID NO.', at: 6.6, size: 84, color: 'red', hit: true }] })],
+  }),
+
+  // L52 · "And this time, many of them should have gone through. Almost a billion dollars. Except for one word."
+  textScene('l52-except-one-word', 'L52 · TEXT · Except for one word', 8.5, {
+    dimPrev: true,
+    lines: [
+      { text: 'ALMOST A BILLION DOLLARS.', at: 3.0, size: 90 },
+      { text: 'EXCEPT FOR', at: 5.0, size: 110 },
+      { text: 'ONE WORD.', at: 6.1, size: 190, color: 'red', hit: true },
+    ],
+  }, { transition: { in: 'fade', out: 'cut' } }),
+
+  // L58 · "...you might have heard that a spelling mistake saved the billion dollars... it saved the 20 million."
+  boardScene('l58-myth', 'L58 · BOARD · The myth', 16, {
+    cards: [
+      { id: 'myth', kind: 'doc', x: 640, y: 520, at: 1.0, title: 'THE FAMOUS VERSION', text: 'A spelling mistake\nsaved the billion dollars.',
+        stamp: { text: 'NOT QUITE', at: 7.4, color: 'red', angle: -12, kick: true } },
+      { id: 'fact', kind: 'doc', x: 1280, y: 520, at: 10.6, title: 'THE RECORD', text: '"Jupiter" match: $850M held.\nThe typo: $20M stopped.',
+        mark: { at: 13, color: 'red' } },
+    ],
+    camera: [{ t: 0, center: [960, 540], zoom: 1 }, { t: 10.4, center: 'fact', zoom: 1.35, dur: 1.8, ease: 'inOutCubic' }],
+  }, 'Reuters; BBC, "The Lazarus heist", 2021'),
+
+  // L62 · "So most of the money was saved by a planet's name, and twenty million by a typo..."
+  boardScene('l62-nobody-knew', 'L62 · BOARD · Nobody knew', 14, {
+    cards: [
+      { id: 'held', kind: 'tag', x: 420, y: 330, at: 0.8, title: '$850M', sub: "HELD · A PLANET'S NAME", color: 'gold' },
+      { id: 'back', kind: 'tag', x: 960, y: 330, at: 3.4, title: '$20M', sub: 'STOPPED · A TYPO', color: 'gold' },
+      { id: 'manila', kind: 'tag', x: 1500, y: 330, at: 6.4, title: '$81M', sub: 'NOW IN THE PHILIPPINES' },
+      { id: 'dhaka', kind: 'note', x: 1200, y: 760, at: 10.4, title: 'DHAKA', text: 'Nobody knew.' },
+    ],
+    strings: [{ from: 'manila', to: 'dhaka', at: 11 }],
+    focus: [{ at: 9.8, dur: 4.2, ids: ['manila', 'dhaka'] }],
+    camera: [{ t: 0, center: [960, 480], zoom: 1.3 }],
+  }, 'Reuters; BBC, "The Lazarus heist", 2021'),
+
+  // L66 · "Meanwhile, in New York, it's still a working day... straight to the system nobody can read."
+  textScene('l66-nobody-can-read', 'L66 · TEXT · Nobody can read them', 15, {
+    kicker: 'FRIDAY 5 FEB 2016', kickerAt: 0.3, dimPrev: true,
+    lines: [
+      { text: 'NEW YORK: A WORKING DAY.', at: 0.6, size: 84 },
+      { text: 'THE FED IS ASKING QUESTIONS.', at: 4.6, size: 84 },
+      { text: 'NOBODY IN DHAKA', at: 10.6, size: 96 },
+      { text: 'CAN READ THEM.', at: 11.7, size: 96, color: 'red', hit: true },
+    ],
+  }),
+
+  // L69 · "It was. The hackers had changed it."  KEY over L67–68 (the error box)
+  textScene('l69-changed-it', 'L69 · KEY over L67–68 error box · Changed it', 4.5, {
+    lines: [
+      { text: 'IT WAS.', at: 0.3, size: 110 },
+      { text: 'THE HACKERS HAD CHANGED IT.', at: 1.4, size: 84, color: 'red', hit: true },
+    ],
+  }, { bg: false }),
+
+  // L72 · "Remember the five-day window? This is it working, exactly as designed."  KEY over L33–38 (five-day window)
+  textScene('l72-the-window', 'L72 · KEY over L33–38 five-day window · The window', 6, {
+    lines: [
+      { text: 'REMEMBER THE', at: 0.3, size: 80 },
+      { text: 'FIVE-DAY WINDOW?', at: 1.0, size: 120, color: 'gold' },
+      { text: 'THIS IS IT WORKING, EXACTLY AS DESIGNED', at: 3.0, sub: true },
+    ],
+  }, { bg: false }),
+
+  // L77 · "And this is where the story stops being about hackers... People moved it."
+  textScene('l77-people-moved-it', 'L77 · TEXT · People moved it', 10.5, {
+    kicker: 'MANILA', kickerAt: 0.4,
+    lines: [
+      { text: "THE MONEY DIDN'T", at: 5.0, size: 96 },
+      { text: 'MOVE BY ITSELF.', at: 6.0, size: 96 },
+      { text: 'PEOPLE MOVED IT.', at: 8.4, size: 150, color: 'red', hit: true },
+    ],
+  }),
+
+  // L80 · "We'll come back to what happened to her at the end."
+  boardScene('l80-come-back', 'L80 · BOARD · We will come back to her', 5.5, {
+    cards: [
+      { id: 'mgr', kind: 'doc', x: 760, y: 520, at: 0.3, title: 'BRANCH MANAGER', sub: 'RCBC · JUPITER ST' },
+      { id: 'q', kind: 'note', x: 1260, y: 470, at: 2.2, title: 'LATER', text: 'What happened to her?', mark: { at: 3.6, color: 'red' } },
+    ],
+    strings: [{ from: 'mgr', to: 'q', at: 2.8 }],
+  }),
+
+  /* ================================================================== */
+  /* Acts 5–7                                                           */
+  /* ================================================================== */
+
+  // L85 · "...Philippine casinos weren't covered by the country's anti-money-laundering reporting rules..."
+  textScene('l85-just-gamblers', 'L85 · TEXT · Just gamblers', 20, {
+    kicker: 'THE THIRD TWIST', kickerAt: 0.4, dimPrev: true,
+    lines: [
+      { text: 'IN 2012, LAWMAKERS', at: 7.4, size: 84 },
+      { text: 'LEFT CASINOS OUT', at: 8.5, size: 110, color: 'red', hit: true },
+      { text: 'OF THE ANTI-MONEY-LAUNDERING RULES.', at: 9.7, size: 54 },
+      { text: 'JUST GAMBLERS.', at: 16.8, size: 130 },
+    ],
+  }, { source: 'Philippine AML law as it stood in 2016; summary with citations: Wikipedia, "Bangladesh Bank robbery"', sourceAt: 8 }),
+
+  // L89 · "Which brings us to the question everyone was asking. Who was actually behind the keyboard?"
+  (() => {
+    const P = (type, p) => prop(type, Object.assign({ scale: K }, p));
+    const desk = P('desk', { x: 1080, y: F, length: 110 });
+    const top = desk.point('top')[1];
+    const chair = P('chair', { x: 800, y: F });
+    const layers = [
+      new UF.Room({ floor: F, wall: '#0d1015', ground: '#07080a', dim: 0.4 }),
+      desk,
+      P('monitor', { x: 1150, y: top, content: 'code', glow: true }),
+      chair,
+      new UF.Character({ role: 'hacker', x: chair.point('seat')[0], y: F, scale: K, start: 'sitType', silhouette: true, seed: 11 }),
+      new UF.Light({ type: 'pool', x: 1150, y: 640, r: 460, ry: 300, color: '#7fb0ff', alpha: 0.12 }),
+      new UF.Light({ type: 'vignette', x: 960, y: 600, r: 900, color: '#000000', alpha: 0.75 }),
+    ];
+    return {
+      id: 'l89-behind-the-keyboard', title: 'L89 · NARRATOR · Behind the keyboard', duration: 8, pushIn: 0,
+      layers: [
+        new UF.Camera({ layers, x: 960, y: 620, zoom: 1.1, handheld: 0.5, moves: [{ at: 0, dur: 8, x: 1000, y: 640, zoom: 1.35 }] }),
+        new UF.BigText({ y: 190, lines: [{ text: 'WHO WAS BEHIND THE KEYBOARD?', at: 3.4, size: 80, hit: true }] }),
+        new UF.DramaLabel({ text: 'ILLUSTRATION', at: 0.2, plate: true }),
+      ],
+    };
+  })(),
+
+  // L99 · "One of the poorest, most isolated countries on Earth..."  KEY over L98 (Korea at night)
+  textScene('l99-poorest', 'L99 · KEY over L98 Korea at night · Accused', 20, {
+    dimPrev: true,
+    lines: [
+      { text: 'ONE OF THE POOREST,', at: 0.5, size: 72 },
+      { text: 'MOST ISOLATED COUNTRIES ON EARTH.', at: 1.8, size: 72 },
+      { text: "MOST PEOPLE CAN'T EVEN ACCESS", at: 6.0, size: 72 },
+      { text: 'THE GLOBAL INTERNET.', at: 7.4, size: 72 },
+      { text: 'ACCUSED OF REACHING INTO A CENTRAL BANK,', at: 11.6, size: 72 },
+      { text: 'AND NEARLY WALKING AWAY WITH', at: 15.6, size: 72 },
+      { text: 'A BILLION DOLLARS.', at: 17.0, size: 96, color: 'red', hit: true },
+    ],
+  }, { bg: false }),
+
+  // L105 · "Now, the question I promised you... investigators suspected the hackers had help inside Bangladesh."
+  narratorScene('l105-the-promise', 'L105 · NARRATOR · The question I promised', 14, {
+    cards: [
+      { id: 'how', x: -150, y: -70, text: 'HOW THEY\nDID IT', at: 0, angle: -3 },
+      { id: 'proof', x: 120, y: -90, text: 'THE REAL\nEVIDENCE', at: 0, angle: 2 },
+      { id: 'inside', x: 0, y: 90, text: 'INSIDE HELP?', at: 0, color: 'red', w: 260, angle: -1,
+        flip: { at: 8.6, text: 'HELP FROM INSIDE\nBANGLADESH?', color: 'red' } },
+    ],
+    strings: [{ from: 'how', to: 'proof', at: 0 }],
+    fig: ({ board }) => ({
+      start: 'think',
+      actions: [
+        { at: 6.4, pose: 'reach', target: board.point('inside') },
+        { at: 11.0, view: 'front', pose: 'talk' },
+      ],
+    }),
+    moves: [{ at: 0, dur: 6, zoom: 1.1 }, { at: 6.2, dur: 2.2, x: 720, y: 500, zoom: 1.7, ease: 'inOutCubic' }, { at: 10.8, dur: 2.6, x: 880, y: 560, zoom: 1.3 }],
+  }),
+
+  // L108 · "Ten years. Ninety-eight extensions. A hacker who's never been arrested..."
+  textScene('l108-ten-years', 'L108 · TEXT · Ten years', 15, {
+    dimPrev: true,
+    lines: [
+      { text: 'TEN YEARS.', at: 0.3, size: 84 },
+      { text: 'NINETY-EIGHT EXTENSIONS.', at: 2.0, size: 84 },
+      { text: 'A CHARGED HACKER, NEVER ARRESTED.', at: 4.6, size: 72 },
+      { text: 'A MAN WHO LEFT ON A PRIVATE JET.', at: 7.0, size: 72 },
+      { text: 'MILLIONS GONE', at: 10.0, size: 96 },
+      { text: 'ACROSS A BACCARAT TABLE.', at: 11.0, size: 96, color: 'red', hit: true },
+    ],
+  }),
+
+  // L110 · "So what do you think: was this purely a foreign hack, or... someone on the inside? Tell me in the comments."
+  narratorScene('l110-what-do-you-think', 'L110 · NARRATOR · What do you think?', 13, {
+    cards: [
+      { id: 'foreign', x: -150, y: -10, text: 'FOREIGN\nHACK?', at: 3.4, angle: -3 },
+      { id: 'inside', x: 150, y: 0, text: 'INSIDE\nJOB?', at: 5.6, color: 'red', angle: 2 },
+    ],
+    fig: { x: 960, facing: -1, start: 'talk', actions: [{ at: 1.0, view: 'front', pose: 'shrug' }, { at: 3.6, pose: 'talk' }] },
+    moves: [{ at: 0, dur: 13, x: 800, y: 560, zoom: 1.2 }],
+    over: [new UF.BigText({ y: 990, lines: [{ text: 'TELL ME IN THE COMMENTS', at: 9.4, sub: true, size: 30, color: 'paper' }] })],
+  }),
+];
+
+new UF.Stage({
+  title: 'EP01 · ME REPLACEMENTS',
+  slug: 'ep01-me',
+  gap: 1.0,
+  scenes,
+});
+</script>
+</body>
+</html>

@@ -741,6 +741,23 @@ new UF.Thumbnail({
 - A `stamp` sits low on the image side, off the face. Without an image it sits on the right.
 - See Thumbnails for saving them.
 
+### Big text — `uf-bigtext.js`
+
+Kinetic narration in place of an on-camera line: a few short lines set large, each word landing in time with the voice-over.
+
+```js
+new UF.BigText({
+  kicker: 'THE CV EMAIL', dimPrev: false, size: 120, x: 960, y: 540, align: 'center',
+  lines: [{ text: 'RASEL AHLAM', at: 0.3, strike: 1.6 },
+          { text: 'DID NOT EXIST.', at: 2.0, color: 'red', hit: true },
+          { text: 'The FBI says the name was a cover', at: 3.2, sub: true }],
+})
+```
+
+- Each line needs `at`. `size`, `color` (`'paper'`, `'red'`, `'gold'` or any CSS colour), `sub` (a small mono line), `strike` (a time; a red line crosses it out), `mark` (a time; a red underline) and `hit` (a camera kick on landing) are per line.
+- `dimPrev` dims earlier lines as each new one lands, for lists read one by one.
+- With no Background layer and `?key`, the stage exports it on green, to key over another shot in the edit.
+
 ### Character — `uf-character.js`
 
 The channel's recurring faceless figure, for dramatised scenes instead of Blender. One jointed rig drawn flat under a soft key light. A role picks the clothes, a pose sets the body, timed actions move it. Load `uf-props.js` too: anything a character holds is drawn by it.

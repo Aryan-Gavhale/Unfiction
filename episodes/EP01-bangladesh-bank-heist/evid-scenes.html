@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EP01 — Bangladesh Bank Heist — Evidence</title>
+<!--
+  Unfiction · EP01 · EVID shots: the real documents, highlighted as the line is read.
+  Screenshots live in photos/. After adding or changing one, re-run:
+    python toolkit/tools/embed_images.py episodes/EP01-bangladesh-bank-heist/images.js episodes/EP01-bangladesh-bank-heist/photos
+  Highlight rects are in screenshot pixels (measured on the PNG); pageRects() scales them to the page.
+
+  photos/L92.png is the two-byte patch (an optional insert for L43–44);
+  photos/l92-swift-code.png is the L92 shot itself (BBHOBDDH in the malware).
+
+  SPACE play/pause · ←/→ previous/next · 1-9 jump · E export · SHIFT+E export all · K editorial check
+-->
+<script src="../../toolkit/core/uf-core.js"></script>
+<script src="images.js"></script>
+<script src="../../toolkit/core/uf-draw.js"></script>
+<script src="../../toolkit/components/uf-overlays.js"></script>
+<script src="../../toolkit/components/uf-reveal.js"></script>
+</head>
+<body>
+<script>
+'use strict';
+
+/** Size of each original screenshot (photos-src/), the space every rect below is measured in. */
+const SRC = { l42: [1704, 887], l92: [1356, 899], l79: [1745, 758], 'l95-headline': [1815, 858], l95: [1895, 940],
+  'l96-fbi-wanted': [1275, 1369], l104: [1754, 922], 'l92-swift-code': [1024, 517] };
+
+/**
+ * A DocumentReveal of a screenshot; every `rect` in its effects is given in screenshot pixels.
+ * `h` is passed explicitly: before the image decodes the page assumes A4, and camera targets would aim too high.
+ */
+function shot(image, w, o) {
+  const [sw, sh] = SRC[image], s = w / sw;
+  const scale = list => (list || []).map(e => (e.rect ? Object.assign({}, e, { rect: e.rect.map(v => Math.round(v * s)) }) : e));
+  return new UF.DocumentReveal(Object.assign({ image, w, h: Math.round(sh * s), x: 960, y: 540, angle: -0.4 }, o, {
+    highlights: scale(o.highlights), marks: scale(o.marks), camera: scale(o.camera),
+  }));
+}
+
+const desk = () => new UF.Background({ style: 'desk', glow: 'rgba(217,164,65,.05)' });
+const source = (text, at) => new UF.SourceTag({ text, at, x: UF.W / 2, align: 'center', y: UF.H - 64 });
+
+/* ==================================================================== */
+/* L42 · "Two bytes to $951m"                                           */
+/* ==================================================================== */
+function sceneBaeReport() {
+  const B = {
+    page: 0.2,    // L42  "Two months after the heist, investigators at BAE Systems published an analysis..."
+    byline: 1.4,  //      author and date
+    title: 5.2,   // L42  "They called their report 'Two bytes to $951m.'"
+    end: 9,
+  };
+  return {
+    id: 'l42-bae-report',
+    title: 'L42 · BAE Systems, "Two bytes to $951m"',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      desk(),
+      shot('l42', 1500, {
+        at: B.page,
+        highlights: [{ rect: [252, 68, 1160, 52], at: B.byline, dur: 0.8 }],
+        marks: [{ rect: [244, 186, 632, 90], at: B.title, dur: 0.7, color: 'red' }],
+        camera: [
+          { t: 0, center: [960, 540], zoom: 1 },
+          { t: B.byline - 0.4, rect: [255, 71, 1153, 45], zoom: 1.45, dur: 1.4, ease: 'inOutCubic' },
+          { t: B.title - 0.5, rect: [252, 194, 614, 74], zoom: 1.7, dur: 1.4, ease: 'inOutCubic' },
+        ],
+      }),
+      source('BAE Systems Threat Research blog, 25 April 2016', 0.9),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L43–44 insert · the patch itself, from the same BAE post             */
+/* ==================================================================== */
+function sceneBaePatch() {
+  const B = {
+    page: 0.2,
+    jump: 1.4,    // L43  "...the malware changed just two bytes in the program's memory."  75 04
+    nops: 5.6,    // L44  "...replaced them with instructions that do nothing."  90 90
+    end: 10,
+  };
+  return {
+    id: 'l44-bae-patch',
+    title: 'L43–44 insert · The two bytes, BAE Systems',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      desk(),
+      shot('l92', 1180, {
+        at: B.page, angle: 0.3,
+        marks: [
+          { rect: [66, 162, 1200, 40], at: B.jump, dur: 0.7, color: 'red' },
+          { rect: [66, 528, 1200, 72], at: B.nops, dur: 0.8, color: 'red' },
+        ],
+        camera: [
+          { t: 0, center: [960, 540], zoom: 1 },
+          { t: B.jump - 0.4, rect: [71, 116, 1190, 250], zoom: 1.45, dur: 1.4, ease: 'inOutCubic' },
+          { t: B.nops - 0.5, rect: [71, 483, 1190, 290], zoom: 1.45, dur: 1.4, ease: 'inOutCubic' },
+        ],
+      }),
+      source('BAE Systems Threat Research blog, 25 April 2016', 0.9),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L79 · Deguito at the Senate                                          */
+/* ==================================================================== */
+function sceneInquirer() {
+  const B = {
+    page: 0.2,    // L79  "The manager of that branch was Maia Santos-Deguito."  (name tag from overlays.html)
+    date: 1.6,
+    invoked: 4.6, // L79  "...she repeatedly invoked her right against self-incrimination."
+    end: 11,
+  };
+  return {
+    id: 'l79-inquirer',
+    title: 'L79 · Inquirer, the Senate probe',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      desk(),
+      shot('l79', 1560, {
+        at: B.page,
+        highlights: [
+          { rect: [592, 280, 358, 28], at: B.date, dur: 0.6 },
+          { rect: [948, 586, 168, 34], at: B.invoked, dur: 0.4 },
+          { rect: [150, 630, 572, 34], at: B.invoked + 0.4, dur: 0.9 },
+        ],
+        camera: [
+          { t: 0, center: [960, 540], zoom: 1 },
+          { t: B.invoked - 0.8, rect: [153, 546, 960, 160], zoom: 1.55, dur: 1.6, ease: 'inOutCubic' },
+        ],
+      }),
+      source('Philippine Daily Inquirer, 15 March 2016', 0.9),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L92 · The bank's SWIFT code, written into the malware                */
+/* ==================================================================== */
+function sceneSwiftCode() {
+  const B = {
+    page: 0.2,    // L92  "Meanwhile, security researchers were pulling the malware apart."
+    code: 2.8,    //      "It had been built specifically for this bank."  BBHOBDDH in the query
+    note: 5.6,    //      "The bank's own SWIFT code was written into it."
+    end: 10,
+  };
+  return {
+    id: 'l92-swift-code',
+    title: 'L92 · BAE Systems, BBHOBDDH in the malware',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      desk(),
+      shot('l92-swift-code', 1300, {
+        at: B.page,
+        highlights: [{ rect: [585, 292, 99, 28], at: B.code, dur: 0.6 }],
+        marks: [{ rect: [198, 422, 576, 62], at: B.note, dur: 0.8, color: 'red' }],
+        camera: [
+          { t: 0, center: [960, 540], zoom: 1 },
+          { t: B.code - 0.6, rect: [206, 220, 563, 170], zoom: 1.7, dur: 1.6, ease: 'inOutCubic' },
+          { t: B.note - 0.4, rect: [206, 260, 563, 220], zoom: 1.45, dur: 1.4, ease: 'inOutCubic' },
+        ],
+      }),
+      source('BAE Systems Threat Research blog, 25 April 2016', 0.9),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L95 · The Department of Justice charges                              */
+/* ==================================================================== */
+function sceneDoj() {
+  const B = {
+    head: 0.2,    // L95  "In September 2018, the US Department of Justice made it official."
+    date: 1.2,
+    bank: 2.6,    //      subtitle: "...Central Bank Cybertheft in Bangladesh..."
+    swap: 5.0,    // L95  "It charged a North Korean programmer, Park Jin Hyok."  the paragraph page
+    stole: 6.2,   //      "...stole $81 million from Bangladesh Bank."
+    end: 10.5,
+  };
+  return {
+    id: 'l95-doj',
+    title: 'L95 · DOJ press release, 6 Sep 2018',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      desk(),
+      shot('l95-headline', 1500, {
+        at: B.head, out: B.swap,
+        highlights: [
+          { rect: [68, 490, 336, 36], at: B.date, dur: 0.6 },
+          { rect: [552, 768, 616, 42], at: B.bank, dur: 0.8 },
+        ],
+        camera: [
+          { t: 0, center: [960, 540], zoom: 1 },
+          { t: B.bank - 0.6, rect: [72, 719, 1615, 85], zoom: 1.25, dur: 1.4, ease: 'inOutCubic' },
+        ],
+      }),
+      shot('l95', 1560, {
+        at: B.swap, angle: 0.4,
+        highlights: [{ rect: [606, 166, 958, 56], at: B.stole, dur: 1.0 }],
+        camera: [
+          { t: 0, center: [960, 540], zoom: 1 },
+          { t: B.stole - 0.6, rect: [48, 171, 1800, 270], zoom: 1.3, dur: 1.6, ease: 'inOutCubic' },
+        ],
+      }),
+      source('US Department of Justice press release, 6 September 2018', 0.9),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L96 · The FBI Wanted poster                                          */
+/* ==================================================================== */
+function sceneWanted() {
+  const B = {
+    page: 0.2,    // L96  "The FBI alleges he was part of a hacking team working for a North Korean government front company,"
+    alleged: 7.0, //      "allegedly a state-sponsored North Korean computer programmer"
+    lazarus: 10.4,//      "...the same group was behind the Sony attack and the WannaCry ransomware outbreak..."
+    end: 16,
+  };
+  return {
+    id: 'l96-fbi-wanted',
+    title: 'L96 · FBI Wanted poster',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      desk(),
+      shot('l96-fbi-wanted', 780, {
+        at: B.page, angle: 0.5, y: 560,
+        highlights: [
+          { rect: [22, 1074, 934, 26], at: B.alleged, dur: 1.0 },
+          { rect: [922, 1139, 330, 24], at: B.lazarus, dur: 0.6 },
+        ],
+        camera: [
+          { t: 0, center: [960, 560], zoom: 1 },
+          { t: 0.6, rect: [300, 248, 680, 560], zoom: 1.35, dur: 5.6, ease: 'inOutSine' },
+          { t: B.alleged - 0.9, rect: [26, 1046, 1220, 200], zoom: 1.6, dur: 1.6, ease: 'inOutCubic' },
+        ],
+      }),
+      source('FBI Wanted poster, Park Jin Hyok (US government work)', 0.9),
+    ],
+  };
+}
+
+/* ==================================================================== */
+/* L104 · Dhaka court orders confiscation                               */
+/* ==================================================================== */
+function sceneDailyStar() {
+  const B = {
+    page: 0.2,    // L104 "In September 2025, a court in Dhaka ordered that 81 million dollars be confiscated from RCBC."
+    head: 1.2,
+    date: 3.6,
+    end: 9.5,     //      "Whether the Philippines will ever enforce it is another question."
+  };
+  return {
+    id: 'l104-daily-star',
+    title: 'L104 · Daily Star, $81m confiscation',
+    duration: B.end,
+    pushIn: 0,
+    layers: [
+      desk(),
+      shot('l104', 1500, {
+        at: B.page,
+        highlights: [
+          { rect: [140, 228, 1166, 56], at: B.head, dur: 1.0 },
+          { rect: [142, 334, 420, 30], at: B.date, dur: 0.6 },
+        ],
+        camera: [
+          { t: 0, center: [960, 540], zoom: 1 },
+          { t: B.head - 0.4, rect: [146, 233, 1152, 140], zoom: 1.4, dur: 1.6, ease: 'inOutCubic' },
+        ],
+      }),
+      source('The Daily Star, 21 September 2025', 0.9),
+    ],
+  };
+}
+
+new UF.Stage({
+  title: 'EP01 · EVIDENCE',
+  slug: 'ep01-evid',
+  gap: 1.0,
+  scenes: [
+    sceneBaeReport(),   // L42
+    sceneBaePatch(),    // L43–44 insert
+    sceneInquirer(),    // L79
+    sceneSwiftCode(),   // L92
+    sceneDoj(),         // L95
+    sceneWanted(),      // L96
+    sceneDailyStar(),   // L104
+  ],
+});
+</script>
+</body>
+</html>

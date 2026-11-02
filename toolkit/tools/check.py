@@ -1,4 +1,4 @@
-"""Run the editorial checker on a toolkit page.
+﻿"""Run the editorial checker on a toolkit page.
 
     python check.py PAGE.html [--json]
 

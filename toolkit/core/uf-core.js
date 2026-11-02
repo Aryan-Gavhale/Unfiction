@@ -420,7 +420,9 @@ void main() {
       for (const s of this.scenes) for (const l of s.layers || []) if (l.setup) l.setup(this);
       this.showFindings(this.check());
 
-      UF.imagesReady().then(() => {
+      // Decoding runs on real time, which headless virtual time does not wait for; check and cues need no pixels.
+      const textOnly = (q.has('check') || q.has('cues')) && !q.has('sheet') && !q.has('thumb') && !q.has('perf');
+      (textOnly ? Promise.resolve() : UF.imagesReady()).then(() => {
         const reports = { check: () => JSON.stringify(this.checkReport(), null, 2), cues: () => this.cuesCsv(),
           sheet: () => this.contactSheet(parseInt(q.get('sheet'), 10) || 4), thumb: () => this.thumbnail(),
           perf: () => JSON.stringify(this.perfReport(parseInt(q.get('perf'), 10) || 12), null, 2) };
