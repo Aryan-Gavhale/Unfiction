@@ -3,6 +3,8 @@
 
 Everything for this episode is in this one file: the script, the research behind it, and the full production guide from camera setup to the day after upload.
 
+> **Visual script:** the episode is now built around the Case File board. See `EP02-case-file-script.md`, which replaces every `ME` shot and the act structure. The narration, research, sources and legal notes in this file are unchanged and still apply.
+
 **Working title:** They Thought It Was a Film Shoot. It Was a Bank Heist.
 **Alternative titles:**
 - Hackers Robbed a Pune Bank in 28 Countries at Once

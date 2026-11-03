@@ -43,6 +43,7 @@ Unfiction/
       uf-thumbnail.js   Thumbnail (YouTube thumbnail layout)
       uf-props.js       Prop (ATM, cards, cash, desk, chairs, screens, phones, bags, paper, clock, fan, ...), Room
       uf-character.js   Character (the recurring faceless figure: roles, poses, walking, hand targets; needs uf-props.js)
+      uf-casefile.js    CaseFile, CaseFileBoard, CaseFileWall (the episode's slate investigation board, keyed to script lines)
       uf-presets.js     UF.scenes.* (whole scenes for the common shots; load it last)
     examples/
       episode-template.html     copy this to start an episode
@@ -808,6 +809,46 @@ atm.point('slot');   // [x, y] on screen, for a character's target
 - **Holding:** `card`, `cardStack`, `cash`, `receipt`, `handset`, `mobile` (alias `phone`), `envelope`, `document`, `clapperboard`, `backpack`, `duffel` (alias `bag`), `mug`, `stopwatch`.
 - `UF.Room({ floor, wall, ground, light, skirting, window: { x, y, w, h } })` is a plain interior (wall, floor, skirting, soft key light, optional blinded window) for character scenes.
 - `examples/cast.html` shows every role, pose and prop, plus three set-ups to copy: a mule at an ATM, a bank officer at a desk, and a handler paying a mule.
+
+### Case File — `uf-casefile.js`
+
+One investigation board per episode, written once as a spec and rendered by every board shot, so each return to the board shows exactly the state the script has reached.
+
+```js
+// episodes/EPxx/case-file.js
+const CASE = new UF.CaseFile({
+  title: 'CASE FILE · COSMOS BANK', footnote: 'Case summary · sources shown in each chapter',
+  columns: [{ id: 'bank', label: 'C2 Inside the bank' }, ...], rows: [{ id: 'dig', label: 'Digital' }, ...],
+  slots: [
+    { id: '04', kind: 'doc', col: 'bank', row: 'dig', at: 'L19', label: 'System', title: 'Proxy switch', icon: 'switch', question: 'Why did nobody see it?' },
+    { id: '06', kind: 'figure', figures: 1, col: 'fix', row: 'ppl', at: 'L28', title: 'Big Boss', sub: 'Dark-web forum · Feb 2018',
+      fan: { at: 'L64', until: 'L68', items: [{ title: 'G' }, ...], note: 'Same email address' },
+      flip: { at: 'L68', title: 'Ghaleb Alaumary', sub: 'Canada · arrested 2019' },
+      stamps: [{ at: 'L68', text: 'PLEADED GUILTY\n11 YRS 8 MO · 2021', tone: 'guilty' }],
+      clips: [{ at: 'L68', text: 'Restitution ordered', strike: 'L68' }] },
+  ],
+  threads: [{ id: 'proxy-atm', from: '04', to: '01', type: 'data', at: 'L19' }, { id: 'bb-loose', from: '06', loose: [-90, 250], at: 'L28', until: 'L60' }],
+  ledger: { title: 'THE MONEY', showEmpty: true, rows: [
+    { id: 'visa', label: 'Visa ATMs abroad', value: '₹78.00 CR', at: 'L46' },
+    { id: 'stolen', label: 'Stolen', value: '₹94.42 CR', total: true, at: 'L52' }] },
+});
+
+// in a scene
+new UF.CaseFileBoard({ file: CASE, line: 'L19', cues: { 'proxy-atm': 1.2, 'proxy-core:mute': 3.4 },
+  camera: [{ t: 0, center: ['03', '04', '02'] }, { t: 2.4, center: ['04', '02', '01'], dur: 2.2 }],
+  portal: { dir: 'out', slot: '04', at: 0, dur: 1.6 }, legend: { at: 6.6 } });
+```
+
+- **Timing is by script line.** Every slot, stamp, clip, thread and ledger row has `at: 'L28'` (`'L28b'` for a second beat). A scene sets `line`: earlier items are already on the board, items of this line animate in, later items are absent, and a counted slot that has not been filled shows as a dashed blank with its `question`. Current-line items play at `cues[id]` (`'id:out'`, `'id:strike'`, `'id:mute'` for the other parts), or are staggered from `autoStart` (0.8 s) every `autoStep` (0.9 s). An unknown id in `cues` throws.
+- **Slots.** `kind`: `doc` (paper), `photo` (photo or `image`), `figure` (silhouettes; `figures: 2` or 3 for groups), `tag` (a money figure in `value`), `note` (small paper; `paper: true` for a light sheet). Placed by `col`/`row` with `dx`/`dy`, or by `x`/`y`. `count: false` keeps a slot out of the `NN / 12` counter. `index` defaults to 01, 02, ...
+- **Stamps** state the exact legal status (`tone`: `convicted`, `guilty`, `charged`, `wanted`, `alleged`, `victim`, `frozen`, `returned`). A new stamp replaces the previous one. **Clips** hang under the card, with `until` and `strike`. **Flip** turns the card over to a new face; **fan** throws aliases out of a card and pulls them back on `until`.
+- **Threads.** `type`: `data` (blue), `people` (amber), `money` (red), `alleged` (grey, dashed). `loose: [dx, dy]` is a thread from a card to nowhere; `bend` curves it; `label` writes on it; `mute: 'Lxx'` greys it out. `legend: { at }` shows the colour key.
+- **Camera.** `center`: `'all'`, `'col:<id>'`, a slot id, a list of ids, or `[x, y]`; `zoom` and `pad` override the fit. The wide shot stays below the HUD and ledger (`safeTop`). `CASE.glide(ids, at, step, { zoom })` returns keyframes that travel card to card. `focus: [{ at, dur, ids }]` dims everything else; `glows: [{ at, ids, dur }]` and `pulses: [{ at, path: [ids], hop }]` light cards and run a spark along a path.
+- **Look.** A matte board, cards on paper stock with worn edges, tape on paper and drawing pins on photos and tags, shadows that hug the card, a warm key from the top left and a cool rim on the right. Board scenes run at a fifth of the channel's grain with no scanline (`fx.grain`, `fx.scan`), and the colour split on their impacts is cut to a quarter. Glows are thin lit edges, and a finished card closes with a rule in its status colour.
+- **Portal.** `portal: { dir: 'in', slot: '01', at, dur, image }` dives into a card until its picture fills the frame, so the cut to the live scene is invisible; `dir: 'out'` pulls back out of it. Use `transition: { out: 'cut' }` on the scene that dives in.
+- **HUD.** Case title, a rolling `NN / 12` counter with a segment bar (`hud`, `hudAt`), the ledger with digit-roll totals, and the footnote, which counts as the source for the editorial check.
+- **`UF.CaseFileWall`** draws the same board, framed, on a wall in a `Room` at `x`, `y`, `w`. `wall.point('12')` gives a hand target for a `Character` pointing at a card. It is a dramatisation: add a `DramaLabel`.
+- `episodes/EP02-cosmos-bank-heist/board-proto.html` shows every feature: reveal, portal in and out, threads and mute, ledger, fan, flip, pulse path, the full board and the wall.
 
 ## One-off visuals
 

@@ -7,7 +7,7 @@
   'use strict';
 
   const UF = global.UF = global.UF || {};
-  UF.version = '1.4.0';
+  UF.version = '1.5.0';
   UF.W = 1920;
   UF.H = 1080;
 
@@ -179,6 +179,7 @@
       this.slices = 8;
       this.sliceAll = 0;
       this.grain = 0.065;
+      this.scan = 1;   // 1 = the channel's fine scanline; a scene may set 0 to drop it
       this.zoom = 1;
     }
     shake(a) { this.shakeAmt += a; return this; }
@@ -220,7 +221,7 @@ in vec2 vUv;
 out vec4 outColor;
 uniform sampler2D uTex;
 uniform vec2 uRes;
-uniform float uTime, uZoom, uRGB, uGlitch, uSeed, uSlices, uSliceAll, uGrain, uExposure, uFade, uKey, uVignette;
+uniform float uTime, uZoom, uRGB, uGlitch, uSeed, uSlices, uSliceAll, uGrain, uExposure, uFade, uKey, uVignette, uScan;
 uniform vec2 uShake;
 
 float hash12(vec2 p) {
@@ -250,7 +251,7 @@ void main() {
   col = col / (1.0 + col * 0.10);
   vec2 vc = (vUv - 0.5) * vec2(A, 1.0);
   col *= mix(1.0 - uVignette, 1.0, smoothstep(1.25, 0.2, length(vc * vec2(0.85, 1.0))));
-  col *= 0.97 + 0.03 * sin(vUv.y * uRes.y * 3.14159265);
+  col *= 1.0 + uScan * (0.03 * sin(vUv.y * uRes.y * 3.14159265) - 0.03);
   float g = hash12(floor(gl_FragCoord.xy / 1.5) + fract(uTime * 37.0) * vec2(113.1, 71.7)) - 0.5;
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
   col += g * uGrain * (0.4 + 0.6 * (1.0 - clamp(lum, 0.0, 1.0)));
@@ -294,7 +295,7 @@ void main() {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
         gl.uniform1i(loc.uTex, 0);
         gl.uniform2f(loc.uRes, canvas.width, canvas.height);
-        for (const k of ['uTime', 'uZoom', 'uRGB', 'uGlitch', 'uSeed', 'uSlices', 'uSliceAll', 'uGrain', 'uExposure', 'uFade', 'uKey', 'uVignette']) gl.uniform1f(loc[k], u[k]);
+        for (const k of ['uTime', 'uZoom', 'uRGB', 'uGlitch', 'uSeed', 'uSlices', 'uSliceAll', 'uGrain', 'uExposure', 'uFade', 'uKey', 'uVignette', 'uScan']) gl.uniform1f(loc[k], u[k]);
         gl.uniform2f(loc.uShake, u.uShake[0], u.uShake[1]);
         gl.bindVertexArray(vao);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -646,7 +647,7 @@ void main() {
         const sy = fx.shakeAmt * (Math.cos(T * 83.7) + 0.5 * Math.sin(T * 173.3));
         this.post.draw(this.comp, {
           uTime: T, uZoom: fx.zoom, uRGB: fx.rgbAmt, uGlitch: fx.glitchAmt, uSeed: fx.glitchSeed, uSlices: fx.slices,
-          uSliceAll: fx.sliceAll, uGrain: fx.grain, uExposure: fx.exposure, uFade: fade, uKey: this.key ? 1 : 0,
+          uSliceAll: fx.sliceAll, uGrain: fx.grain, uExposure: fx.exposure, uFade: fade, uKey: this.key ? 1 : 0, uScan: fx.scan,
           uVignette: this.o.vignette, uShake: [sx, sy],
         });
       } else {
